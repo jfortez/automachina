@@ -1,15 +1,15 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-	View,
+	ActivityIndicator,
+	Alert,
+	ScrollView,
 	Text,
 	TextInput,
 	TouchableOpacity,
-	ScrollView,
-	ActivityIndicator,
-	Alert,
+	View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { Container } from "@/components/container";
 import { trpc } from "@/utils/trpc";
@@ -66,30 +66,30 @@ export default function TodosScreen() {
 		<Container>
 			<ScrollView className="flex-1">
 				<View className="px-4 py-6">
-					<View className="mb-6 rounded-lg border border-border p-4 bg-card">
-						<Text className="text-foreground text-2xl font-bold mb-2">
+					<View className="mb-6 rounded-lg border border-border bg-card p-4">
+						<Text className="mb-2 font-bold text-2xl text-foreground">
 							Todo List
 						</Text>
-						<Text className="text-muted-foreground mb-4">
+						<Text className="mb-4 text-muted-foreground">
 							Manage your tasks efficiently
 						</Text>
 
 						<View className="mb-6">
-							<View className="flex-row items-center space-x-2 mb-2">
+							<View className="mb-2 flex-row items-center space-x-2">
 								<TextInput
 									value={newTodoText}
 									onChangeText={setNewTodoText}
 									placeholder="Add a new task..."
 									placeholderTextColor="#6b7280"
 									editable={!createMutation.isPending}
-									className="flex-1 border border-border rounded-md px-3 py-2 text-foreground bg-background"
+									className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-foreground"
 									onSubmitEditing={handleAddTodo}
 									returnKeyType="done"
 								/>
 								<TouchableOpacity
 									onPress={handleAddTodo}
 									disabled={createMutation.isPending || !newTodoText.trim()}
-									className={`px-4 py-2 rounded-md ${
+									className={`rounded-md px-4 py-2 ${
 										createMutation.isPending || !newTodoText.trim()
 											? "bg-muted"
 											: "bg-primary"
@@ -98,7 +98,7 @@ export default function TodosScreen() {
 									{createMutation.isPending ? (
 										<ActivityIndicator size="small" color="white" />
 									) : (
-										<Text className="text-white font-medium">Add</Text>
+										<Text className="font-medium text-white">Add</Text>
 									)}
 								</TouchableOpacity>
 							</View>
@@ -117,9 +117,9 @@ export default function TodosScreen() {
 								{todos.data?.map((todo) => (
 									<View
 										key={todo.id}
-										className="flex-row items-center justify-between rounded-md border border-border p-3 bg-background"
+										className="flex-row items-center justify-between rounded-md border border-border bg-background p-3"
 									>
-										<View className="flex-row items-center flex-1">
+										<View className="flex-1 flex-row items-center">
 											<TouchableOpacity
 												onPress={() =>
 													handleToggleTodo(todo.id, todo.completed)
@@ -135,7 +135,7 @@ export default function TodosScreen() {
 											<Text
 												className={`flex-1 ${
 													todo.completed
-														? "line-through text-muted-foreground"
+														? "text-muted-foreground line-through"
 														: "text-foreground"
 												}`}
 											>

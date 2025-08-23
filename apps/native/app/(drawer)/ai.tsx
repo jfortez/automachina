@@ -1,17 +1,17 @@
-import { useRef, useEffect, useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import { Ionicons } from "@expo/vector-icons";
+import { DefaultChatTransport } from "ai";
+import { fetch as expoFetch } from "expo/fetch";
+import { useEffect, useRef, useState } from "react";
 import {
-	View,
+	KeyboardAvoidingView,
+	Platform,
+	ScrollView,
 	Text,
 	TextInput,
 	TouchableOpacity,
-	ScrollView,
-	KeyboardAvoidingView,
-	Platform,
+	View,
 } from "react-native";
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
-import { fetch as expoFetch } from "expo/fetch";
-import { Ionicons } from "@expo/vector-icons";
 import { Container } from "@/components/container";
 
 const generateAPIUrl = (relativePath: string) => {
@@ -40,7 +40,7 @@ export default function AIScreen() {
 
 	useEffect(() => {
 		scrollViewRef.current?.scrollToEnd({ animated: true });
-	}, [messages]);
+	}, []);
 
 	const onSubmit = () => {
 		const value = input.trim();
@@ -53,11 +53,11 @@ export default function AIScreen() {
 	if (error) {
 		return (
 			<Container>
-				<View className="flex-1 justify-center items-center px-4">
-					<Text className="text-destructive text-center text-lg mb-4">
+				<View className="flex-1 items-center justify-center px-4">
+					<Text className="mb-4 text-center text-destructive text-lg">
 						Error: {error.message}
 					</Text>
-					<Text className="text-muted-foreground text-center">
+					<Text className="text-center text-muted-foreground">
 						Please check your connection and try again.
 					</Text>
 				</View>
@@ -73,7 +73,7 @@ export default function AIScreen() {
 			>
 				<View className="flex-1 px-4 py-6">
 					<View className="mb-6">
-						<Text className="text-foreground text-2xl font-bold mb-2">
+						<Text className="mb-2 font-bold text-2xl text-foreground">
 							AI Chat
 						</Text>
 						<Text className="text-muted-foreground">
@@ -83,12 +83,12 @@ export default function AIScreen() {
 
 					<ScrollView
 						ref={scrollViewRef}
-						className="flex-1 mb-4"
+						className="mb-4 flex-1"
 						showsVerticalScrollIndicator={false}
 					>
 						{messages.length === 0 ? (
-							<View className="flex-1 justify-center items-center">
-								<Text className="text-center text-muted-foreground text-lg">
+							<View className="flex-1 items-center justify-center">
+								<Text className="text-center text-lg text-muted-foreground">
 									Ask me anything to get started!
 								</Text>
 							</View>
@@ -97,13 +97,13 @@ export default function AIScreen() {
 								{messages.map((message) => (
 									<View
 										key={message.id}
-										className={`p-3 rounded-lg ${
+										className={`rounded-lg p-3 ${
 											message.role === "user"
-												? "bg-primary/10 ml-8"
-												: "bg-card mr-8 border border-border"
+												? "ml-8 bg-primary/10"
+												: "mr-8 border border-border bg-card"
 										}`}
 									>
-										<Text className="text-sm font-semibold mb-1 text-foreground">
+										<Text className="mb-1 font-semibold text-foreground text-sm">
 											{message.role === "user" ? "You" : "AI Assistant"}
 										</Text>
 										<View className="space-y-1">
@@ -134,14 +134,14 @@ export default function AIScreen() {
 						)}
 					</ScrollView>
 
-					<View className="border-t border-border pt-4">
+					<View className="border-border border-t pt-4">
 						<View className="flex-row items-end space-x-2">
 							<TextInput
 								value={input}
 								onChangeText={setInput}
 								placeholder="Type your message..."
 								placeholderTextColor="#6b7280"
-								className="flex-1 border border-border rounded-md px-3 py-2 text-foreground bg-background min-h-[40px] max-h-[120px]"
+								className="max-h-[120px] min-h-[40px] flex-1 rounded-md border border-border bg-background px-3 py-2 text-foreground"
 								onSubmitEditing={(e) => {
 									e.preventDefault();
 									onSubmit();
@@ -151,9 +151,7 @@ export default function AIScreen() {
 							<TouchableOpacity
 								onPress={onSubmit}
 								disabled={!input.trim()}
-								className={`p-2 rounded-md ${
-									input.trim() ? "bg-primary" : "bg-muted"
-								}`}
+								className={`rounded-md p-2 ${input.trim() ? "bg-primary" : "bg-muted"}`}
 							>
 								<Ionicons
 									name="send"
