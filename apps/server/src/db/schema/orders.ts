@@ -5,8 +5,10 @@ import {
 	pgTable,
 	text,
 	timestamp,
+	unique,
 	uuid,
 } from "drizzle-orm/pg-core";
+import { customers } from "./customer";
 import { handlingUnits } from "./handlingUnits";
 import { batches } from "./inventory";
 import { organizations } from "./organizations";
@@ -16,20 +18,24 @@ import { uom } from "./uom";
 import { uuidPk } from "./utils";
 
 // Purchase Orders
-export const purchaseOrders = pgTable("purchase_order", {
-	id: uuidPk("id"),
-	organizationId: uuid("organization_id")
-		.references(() => organizations.id)
-		.notNull(),
-	supplierId: uuid("supplier_id")
-		.references(() => suppliers.id)
-		.notNull(),
-	code: text("code").notNull(),
-	status: text("status").default("open").notNull(),
-	orderedAt: timestamp("ordered_at", { withTimezone: true })
-		.defaultNow()
-		.notNull(),
-});
+export const purchaseOrders = pgTable(
+	"purchase_order",
+	{
+		id: uuidPk("id"),
+		organizationId: uuid("organization_id")
+			.references(() => organizations.id)
+			.notNull(),
+		supplierId: uuid("supplier_id")
+			.references(() => suppliers.id)
+			.notNull(),
+		code: text("code").notNull(),
+		status: text("status").default("open").notNull(),
+		orderedAt: timestamp("ordered_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(t) => [unique().on(t.organizationId, t.code)],
+);
 
 export const purchaseOrderLines = pgTable("purchase_order_line", {
 	id: uuidPk("id"),
@@ -47,31 +53,24 @@ export const purchaseOrderLines = pgTable("purchase_order_line", {
 	currency: text("currency").default("USD"),
 });
 
-// Sales Orders
-export const customers = pgTable("customer", {
-	id: uuidPk("id"),
-	organizationId: uuid("organization_id")
-		.references(() => organizations.id)
-		.notNull(),
-	code: text("code").notNull(),
-	name: text("name").notNull(),
-	contactInfo: jsonb("contact_info").default(sql`'{}'::jsonb`).notNull(),
-});
-
-export const salesOrders = pgTable("sales_order", {
-	id: uuidPk("id"),
-	organizationId: uuid("organization_id")
-		.references(() => organizations.id)
-		.notNull(),
-	customerId: uuid("customer_id")
-		.references(() => customers.id)
-		.notNull(),
-	code: text("code").notNull(),
-	status: text("status").default("open").notNull(),
-	orderedAt: timestamp("ordered_at", { withTimezone: true })
-		.defaultNow()
-		.notNull(),
-});
+export const salesOrders = pgTable(
+	"sales_order",
+	{
+		id: uuidPk("id"),
+		organizationId: uuid("organization_id")
+			.references(() => organizations.id)
+			.notNull(),
+		customerId: uuid("customer_id")
+			.references(() => customers.id)
+			.notNull(),
+		code: text("code").notNull(),
+		status: text("status").default("open").notNull(),
+		orderedAt: timestamp("ordered_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(t) => [unique().on(t.organizationId, t.code)],
+);
 
 export const salesOrderLines = pgTable("sales_order_line", {
 	id: uuidPk("id"),

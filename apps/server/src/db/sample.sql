@@ -16,6 +16,7 @@ END$$;
 -- ==========
 -- MULTI TENANT
 -- ==========
+✅
 CREATE TABLE IF NOT EXISTS organization (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   code            text UNIQUE NOT NULL,
@@ -26,6 +27,7 @@ CREATE TABLE IF NOT EXISTS organization (
 -- ==========
 -- UoM Y CONVERSIONES
 -- ==========
+✅
 CREATE TABLE IF NOT EXISTS uom (
   code            text PRIMARY KEY,       -- p.ej. 'EA', 'KG', 'L', 'CS', 'PK', 'mL', 'g'
   name            text NOT NULL,
@@ -35,6 +37,7 @@ CREATE TABLE IF NOT EXISTS uom (
   created_at      timestamptz NOT NULL DEFAULT now()
 );
 
+✅
 CREATE TABLE IF NOT EXISTS uom_conversion (
   -- Conversión multiplicativa: 1 from_uom = factor * to_uom (dentro de la misma categoría).
   from_uom        text REFERENCES uom(code) ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -47,6 +50,7 @@ CREATE TABLE IF NOT EXISTS uom_conversion (
 -- ==========
 -- CATALOGACIÓN DE PRODUCTOS
 -- ==========
+✅
 CREATE TABLE IF NOT EXISTS product_category (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
@@ -55,6 +59,7 @@ CREATE TABLE IF NOT EXISTS product_category (
   UNIQUE (organization_id, code)
 );
 
+✅
 CREATE TABLE IF NOT EXISTS product (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
@@ -73,6 +78,7 @@ CREATE TABLE IF NOT EXISTS product (
 );
 
 -- Identificadores externos (GTIN, EAN, UPC, NDC, CAS, SKU de proveedor, etc.)
+✅
 CREATE TABLE IF NOT EXISTS product_identifier (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id      uuid NOT NULL REFERENCES product(id) ON DELETE CASCADE,
@@ -83,6 +89,7 @@ CREATE TABLE IF NOT EXISTS product_identifier (
 );
 
 -- Presentaciones / empaques válidos por producto (conversión a base)
+✅
 CREATE TABLE IF NOT EXISTS product_uom (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id      uuid NOT NULL REFERENCES product(id) ON DELETE CASCADE,
@@ -98,6 +105,7 @@ ON product_uom(product_id) WHERE (is_base);
 -- ==========
 -- PROVEEDORES Y COMPRAS
 -- ==========
+✅
 CREATE TABLE IF NOT EXISTS supplier (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
@@ -108,6 +116,7 @@ CREATE TABLE IF NOT EXISTS supplier (
 );
 
 -- Catálogo de productos del proveedor (para facilitar alta/ingreso)
+✅
 CREATE TABLE IF NOT EXISTS supplier_product (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   supplier_id     uuid NOT NULL REFERENCES supplier(id) ON DELETE CASCADE,
@@ -122,6 +131,7 @@ CREATE TABLE IF NOT EXISTS supplier_product (
 -- ==========
 -- ALMACENES Y UBICACIONES
 -- ==========
+✅
 CREATE TABLE IF NOT EXISTS warehouse (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
@@ -131,6 +141,7 @@ CREATE TABLE IF NOT EXISTS warehouse (
   UNIQUE (organization_id, code)
 );
 
+✅
 CREATE TABLE IF NOT EXISTS location (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   warehouse_id    uuid NOT NULL REFERENCES warehouse(id) ON DELETE CASCADE,
@@ -145,6 +156,7 @@ CREATE TABLE IF NOT EXISTS location (
 -- ==========
 -- LOTES Y SERIES
 -- ==========
+✅
 CREATE TABLE IF NOT EXISTS batch (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id      uuid NOT NULL REFERENCES product(id) ON DELETE CASCADE,
@@ -157,6 +169,7 @@ CREATE TABLE IF NOT EXISTS batch (
   UNIQUE (product_id, code)
 );
 
+✅
 CREATE TABLE IF NOT EXISTS serial_number (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id      uuid NOT NULL REFERENCES product(id) ON DELETE CASCADE,
@@ -169,6 +182,7 @@ CREATE TABLE IF NOT EXISTS serial_number (
 -- ==========
 -- HANDLING UNITS (HU) Y CONTENIDO
 -- ==========
+✅
 CREATE TABLE IF NOT EXISTS handling_unit (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
@@ -182,6 +196,7 @@ CREATE TABLE IF NOT EXISTS handling_unit (
 );
 
 -- HU con contenido multi-producto (permite cajas mixtas)
+✅
 CREATE TABLE IF NOT EXISTS handling_unit_content (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   handling_unit_id uuid NOT NULL REFERENCES handling_unit(id) ON DELETE CASCADE,
@@ -194,6 +209,7 @@ CREATE TABLE IF NOT EXISTS handling_unit_content (
 -- ==========
 -- DOCUMENTOS (simplificados)
 -- ==========
+✅
 CREATE TABLE IF NOT EXISTS purchase_order (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
@@ -204,6 +220,7 @@ CREATE TABLE IF NOT EXISTS purchase_order (
   UNIQUE (organization_id, code)
 );
 
+✅
 CREATE TABLE IF NOT EXISTS purchase_order_line (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   purchase_order_id uuid NOT NULL REFERENCES purchase_order(id) ON DELETE CASCADE,
