@@ -22,6 +22,7 @@ export const suppliers = pgTable(
 			.notNull(),
 		code: text("code").notNull(),
 		name: text("name").notNull(),
+		image: text("image"),
 		contactInfo: jsonb("contact_info").default(sql`'{}'::jsonb`).notNull(),
 		...timestamps,
 	},

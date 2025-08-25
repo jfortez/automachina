@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import { pgTable, primaryKey, text, uuid } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { timestamps, uuidPk } from "./utils";
@@ -23,3 +24,18 @@ export const orgMembers = pgTable(
 	},
 	(t) => [primaryKey({ columns: [t.organizationId, t.userId] })],
 );
+
+export const orgRelations = relations(organizations, ({ many }) => ({
+	members: many(orgMembers),
+}));
+
+export const orgMembersRelations = relations(orgMembers, ({ one }) => ({
+	organization: one(organizations, {
+		fields: [orgMembers.organizationId],
+		references: [organizations.id],
+	}),
+	user: one(user, {
+		fields: [orgMembers.userId],
+		references: [user.id],
+	}),
+}));

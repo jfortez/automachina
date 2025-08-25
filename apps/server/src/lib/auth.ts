@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db";
 import * as schema from "../db/schema/auth";
+import env from "./env";
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
@@ -10,7 +11,7 @@ export const auth = betterAuth({
 
 		schema: schema,
 	}),
-	trustedOrigins: [process.env.CORS_ORIGIN || "", "my-better-t-app://"],
+	trustedOrigins: [env.CORS_ORIGIN || "", "my-better-t-app://"],
 	emailAndPassword: {
 		enabled: true,
 	},
