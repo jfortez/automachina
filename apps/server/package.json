@@ -31,10 +31,12 @@
 		"drizzle-orm": "^0.44.4",
 		"drizzle-seed": "^0.3.1",
 		"hono": "^4.9.4",
+		"ora": "^8.2.0",
 		"pg": "^8.16.3",
 		"zod": "^4.1.0"
 	},
 	"devDependencies": {
+		"@faker-js/faker": "^10.0.0",
 		"@types/node": "^22.17.2",
 		"@types/pg": "^8.15.5",
 		"drizzle-kit": "^0.31.4",
