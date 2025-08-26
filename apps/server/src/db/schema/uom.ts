@@ -6,7 +6,7 @@ export const uom = pgTable("uom", {
 	code: text("code").primaryKey(),
 	name: text("name").notNull(),
 	system: text("system").notNull(), // UNECE o UCUM
-	category: text("category").notNull(), // count, mass, volume, etc.
+	category: text("category").notNull(), // count','mass','volume','length','area','time','other'
 	isPackaging: boolean("is_packaging").default(false).notNull(),
 	...timestamps,
 });

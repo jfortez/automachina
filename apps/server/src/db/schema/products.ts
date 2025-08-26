@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
 	boolean,
 	integer,
@@ -53,6 +53,20 @@ export const products = pgTable(
 		...timestamps,
 	},
 	(t) => [unique().on(t.organizationId, t.sku)],
+);
+
+export const productRelations = relations(products, ({ one, many }) => ({
+	category: one(productCategories),
+	images: many(productImages),
+	organization: one(organizations),
+}));
+
+export const productCategoryRelations = relations(
+	productCategories,
+	({ one, many }) => ({
+		organization: one(organizations),
+		products: many(products),
+	}),
 );
 
 // Identificadores externos: GTIN, EAN, UPC, etc.
