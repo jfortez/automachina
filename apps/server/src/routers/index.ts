@@ -1,4 +1,10 @@
-import { protectedProcedure, publicProcedure, router } from "../lib/trpc";
+import {
+	createCallerFactory,
+	protectedProcedure,
+	publicProcedure,
+	router,
+} from "../lib/trpc";
+import { customerRouter } from "./customer";
 import { orgRouter } from "./organization";
 import { productRouter } from "./product";
 import { supplierRouter } from "./supplier";
@@ -22,5 +28,9 @@ export const appRouter = router({
 	supplier: supplierRouter,
 	product: productRouter,
 	uom: uomRouter,
+	customer: customerRouter,
 });
+
+export const createCaller = createCallerFactory(appRouter);
+
 export type AppRouter = typeof appRouter;

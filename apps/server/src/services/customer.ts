@@ -8,6 +8,13 @@ const getAllCustomers = async () => {
 	return customers;
 };
 
+const getCustomerById = async (id: string) => {
+	const customer = await db.query.customers.findFirst({
+		where: eq(customers.id, id),
+	});
+	return customer;
+};
+
 const createCustomer = async (data: CreateCustomerInput) => {
 	const customer = await db.insert(customers).values(data).returning();
 	return customer;
@@ -30,4 +37,10 @@ const deleteCustomer = async (id: string) => {
 	return customer;
 };
 
-export { getAllCustomers, createCustomer, updateCustomer, deleteCustomer };
+export {
+	getAllCustomers,
+	createCustomer,
+	updateCustomer,
+	deleteCustomer,
+	getCustomerById,
+};

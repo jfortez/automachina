@@ -5,6 +5,9 @@ import * as customerService from "@/services/customer";
 
 export const customerRouter = router({
 	getAll: publicProcedure.query(customerService.getAllCustomers),
+	getById: publicProcedure
+		.input(z.string())
+		.query((opts) => customerService.getCustomerById(opts.input)),
 	create: publicProcedure
 		.input(createCustomer)
 		.mutation(({ input }) => customerService.createCustomer(input)),

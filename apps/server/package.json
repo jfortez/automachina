@@ -16,7 +16,8 @@
 		"db:watch": "docker compose up",
 		"db:stop": "docker compose stop",
 		"db:down": "docker compose down",
-		"db:seed": "bun run ./src/db/seed.ts"
+		"db:seed": "bun run ./src/db/seed.ts",
+		"test": "vitest"
 	},
 	"dependencies": {
 		"@ai-sdk/google": "^2.0.8",
@@ -42,6 +43,7 @@
 		"drizzle-kit": "^0.31.4",
 		"tsdown": "^0.12.9",
 		"tsx": "^4.20.4",
-		"typescript": "^5.9.2"
+		"typescript": "^5.9.2",
+		"vitest": "^3.2.4"
 	}
 }
