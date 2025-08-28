@@ -6,7 +6,7 @@ import { createContextInner } from "@/lib/context";
 import type { AppRouter } from "@/routers";
 import { createCaller } from "@/routers";
 
-test("add and get post", async () => {
+test("create customer and validate if exists", async () => {
 	const session = await auth.api.signInEmail({
 		body: { email: "rylan_reichel@yahoo.com", password: "password" },
 		returnHeaders: true,
