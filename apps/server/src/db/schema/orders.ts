@@ -1,6 +1,4 @@
-import { sql } from "drizzle-orm";
 import {
-	jsonb,
 	numeric,
 	pgTable,
 	text,

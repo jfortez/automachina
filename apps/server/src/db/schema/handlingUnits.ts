@@ -2,6 +2,8 @@ import { sql } from "drizzle-orm";
 import {
 	type AnyPgColumn,
 	check,
+	index,
+	jsonb,
 	numeric,
 	pgTable,
 	text,
@@ -57,7 +59,14 @@ export const handlingUnitContents = pgTable(
 		batchId: uuid("batch_id").references(() => batches.id, {
 			onDelete: "set null",
 		}),
+		uomCode: text("uom_code").references(() => uom.code),
 		qtyInBase: numeric("qty_in_base", { precision: 28, scale: 9 }).notNull(),
+		qtyInUom: numeric("qty_in_uom", { precision: 28, scale: 9 }).notNull(),
+		attributes: jsonb("attributes").default(sql`'{}'::jsonb`).notNull(),
 	},
-	(t) => [check("check_qty_in_base", sql`${t.qtyInBase} > 0`)],
+	(t) => [
+		check("check_qty_in_base", sql`${t.qtyInBase} > 0`),
+		index().on(t.productId, t.handlingUnitId),
+	],
 );
+// qtyInBase = qtyInUom * productUom.qtyInBase

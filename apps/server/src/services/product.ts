@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { productImages, products } from "@/db/schema/products";
+import { productImages, products, productUom } from "@/db/schema/products";
 import type { CreateProductInput } from "@/dto/product";
 
 const getAllProducts = async () => {
@@ -47,18 +47,40 @@ const getProductIdentifiers = async () => {
 	return identifiers;
 };
 
-const createProduct = async (data: CreateProductInput) => {
-	const { images, ...productData } = data;
-	const newProduct = await db.insert(products).values(productData).returning();
-	if (images) {
-		await db.insert(productImages).values(
-			images.map((image) => ({
-				productId: newProduct[0].id,
-				url: image,
-			})),
-		);
-	}
-	return newProduct;
+const createProduct = async (d: CreateProductInput) => {
+	return await db.transaction(async (tx) => {
+		const [createdProduct] = await tx
+			.insert(products)
+			.values({
+				organizationId: d.organizationId,
+				sku: d.sku,
+				name: d.name,
+				description: d.description,
+				categoryId: d.categoryId,
+				baseUom: d.baseUom,
+				trackingLevel: "none",
+				attributes: d.attributes,
+			})
+			.returning();
+		const prodId = createdProduct.id;
+		for (const pu of d.productUoms) {
+			await db.insert(productUom).values({
+				productId: prodId,
+				uomCode: pu.uomCode,
+				qtyInBase: pu.qtyInBase,
+			});
+		}
+
+		if (d.images) {
+			for (const img of d.images) {
+				await db.insert(productImages).values({
+					productId: prodId,
+					...img,
+				});
+			}
+		}
+		return createdProduct;
+	});
 };
 
 export {

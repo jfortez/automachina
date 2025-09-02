@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, primaryKey, text, uuid } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, primaryKey, text, uuid } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { timestamps, uuidPk } from "./utils";
 
@@ -8,6 +8,9 @@ export const organizations = pgTable("organization", {
 	code: text("code").unique().notNull(),
 	name: text("name").notNull(),
 	description: text("description"),
+	defaultCurrency: text("default_currency").notNull().default("USD"),
+	defaultLocale: text("default_locale").notNull().default("en-US"),
+	metadata: jsonb("metadata").default("{}").notNull(),
 	...timestamps,
 });
 
