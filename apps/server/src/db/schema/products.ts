@@ -223,28 +223,6 @@ export const productPrice = pgTable(
 	],
 );
 
-/**
- * CREATE TABLE IF NOT EXISTS discount_rule (
-  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id uuid NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
-  code            text NOT NULL,
-  name            text NOT NULL,
-  type            text NOT NULL CHECK (type IN ('percentage','fixed','volume','bogo','tiered')),
-  value           numeric(18,6) NOT NULL, -- porcentaje (0-100) o monto fijo según type
-  currency        text,
-  applies_to      text NOT NULL CHECK (applies_to IN ('product','category','price_list','global')),
-  applies_to_id   uuid, -- id del producto, product_category o price_list según applies_to (vale NULL para global)
-  conditions      jsonb NOT NULL DEFAULT '{}'::jsonb, -- ex: {"min_qty":10}
-  combinable      boolean NOT NULL DEFAULT false,
-  start_at        timestamptz,
-  end_at          timestamptz,
-  is_active       boolean NOT NULL DEFAULT true,
-  created_at      timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS ix_discount_rule_org ON discount_rule(organization_id);
-
- */
-
 export const discountRule = pgTable(
 	"discount_rule",
 	{
