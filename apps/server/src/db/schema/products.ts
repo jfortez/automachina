@@ -19,7 +19,7 @@ import { uom } from "./uom";
 import { timestamps, uuidPk } from "./utils";
 
 // Categorías de producto
-export const productCategories = pgTable(
+export const productCategory = pgTable(
 	"product_category",
 	{
 		id: uuidPk("id"),
@@ -28,12 +28,13 @@ export const productCategories = pgTable(
 			.notNull(),
 		code: text("code").notNull(),
 		name: text("name").notNull(),
+		description: text("description"),
 	},
 	(t) => [unique().on(t.organizationId, t.code)],
 );
 
 // Productos principales
-export const products = pgTable(
+export const product = pgTable(
 	"product",
 	{
 		id: uuidPk("id"),
@@ -43,7 +44,7 @@ export const products = pgTable(
 		sku: text("sku").notNull(),
 		name: text("name").notNull(),
 		description: text("description"),
-		categoryId: uuid("category_id").references(() => productCategories.id),
+		categoryId: uuid("category_id").references(() => productCategory.id),
 		baseUom: text("base_uom")
 			.references(() => uom.code, { onDelete: "restrict" })
 			.notNull(),
@@ -60,7 +61,7 @@ export const products = pgTable(
 				onDelete: "set null",
 			},
 		),
-		parentId: uuid("parent_id").references((): AnyPgColumn => products.id, {
+		parentId: uuid("parent_id").references((): AnyPgColumn => product.id, {
 			onDelete: "set null",
 		}),
 		suggestedRetailPrice: numeric("suggested_retail_price", {
@@ -75,17 +76,17 @@ export const products = pgTable(
 	(t) => [unique().on(t.organizationId, t.sku)],
 );
 
-export const productRelations = relations(products, ({ one, many }) => ({
-	category: one(productCategories),
+export const productRelations = relations(product, ({ one, many }) => ({
+	category: one(productCategory),
 	images: many(productImages),
 	organization: one(organizations),
 }));
 
 export const productCategoryRelations = relations(
-	productCategories,
+	productCategory,
 	({ one, many }) => ({
 		organization: one(organizations),
-		products: many(products),
+		products: many(product),
 	}),
 );
 
@@ -95,7 +96,7 @@ export const productIdentifiers = pgTable(
 	{
 		id: uuidPk("id"),
 		productId: uuid("product_id")
-			.references(() => products.id, { onDelete: "cascade" })
+			.references(() => product.id, { onDelete: "cascade" })
 			.notNull(),
 		type: text("type").notNull(), // GTIN','EAN','UPC','NDC','CAS','SKU_SUPPLIER','CUSTOM', etc.
 		value: text("value").notNull(),
@@ -110,7 +111,7 @@ export const productUom = pgTable(
 	{
 		id: uuidPk("id"),
 		productId: uuid("product_id")
-			.references(() => products.id, { onDelete: "cascade" })
+			.references(() => product.id, { onDelete: "cascade" })
 			.notNull(),
 		uomCode: text("uom_code")
 			.references(() => uom.code, { onDelete: "restrict" })
@@ -127,7 +128,7 @@ export const productImages = pgTable(
 	{
 		id: uuidPk("id"),
 		productId: uuid("product_id")
-			.references(() => products.id, { onDelete: "cascade" })
+			.references(() => product.id, { onDelete: "cascade" })
 			.notNull(),
 		productFamilyId: uuid("product_family_id").references(
 			() => productFamily.id,
@@ -195,7 +196,7 @@ export const productPrice = pgTable(
 	{
 		id: uuidPk("id"),
 		productId: uuid("product_id")
-			.references(() => products.id, { onDelete: "cascade" })
+			.references(() => product.id, { onDelete: "cascade" })
 			.notNull(),
 		priceListId: uuid("price_list_id").references(() => priceList.id, {
 			onDelete: "set null",

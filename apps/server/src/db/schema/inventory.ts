@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { handlingUnits } from "./handlingUnits";
 import { organizations } from "./organizations";
-import { products } from "./products";
+import { product } from "./products";
 import { suppliers } from "./suppliers";
 import { uom } from "./uom";
 import { uuidPk } from "./utils";
@@ -25,7 +25,7 @@ export const batches = pgTable(
 	{
 		id: uuidPk("id"),
 		productId: uuid("product_id")
-			.references(() => products.id, { onDelete: "cascade" })
+			.references(() => product.id, { onDelete: "cascade" })
 			.notNull(),
 		supplierId: uuid("supplier_id").references(() => suppliers.id),
 		code: text("code").notNull(), // número de lote
@@ -40,7 +40,7 @@ export const batches = pgTable(
 export const serialNumbers = pgTable("serial_number", {
 	id: uuidPk("id"),
 	productId: uuid("product_id")
-		.references(() => products.id, { onDelete: "cascade" })
+		.references(() => product.id, { onDelete: "cascade" })
 		.notNull(),
 	batchId: uuid("batch_id").references(() => batches.id, {
 		onDelete: "set null",
@@ -62,7 +62,7 @@ export const inventoryLedger = pgTable(
 		movementType: text("movement_type").notNull(),
 		productId: uuid("product_id")
 			.notNull()
-			.references(() => products.id, { onDelete: "restrict" }),
+			.references(() => product.id, { onDelete: "restrict" }),
 		warehouseId: uuid("warehouse_id").references(() => warehouses.id),
 		locationId: uuid("location_id").references(() => locations.id),
 		batchId: uuid("batch_id").references(() => batches.id),
@@ -96,7 +96,7 @@ export const costLayer = pgTable(
 			.references(() => organizations.id, { onDelete: "cascade" }),
 		productId: uuid("product_id")
 			.notNull()
-			.references(() => products.id, { onDelete: "restrict" }),
+			.references(() => product.id, { onDelete: "restrict" }),
 		batchId: uuid("batch_id").references(() => batches.id),
 		receivedAt: timestamp("received_at", { withTimezone: true }).notNull(),
 		qtyInBase: numeric("qty_in_base", { precision: 28, scale: 9 }).notNull(),

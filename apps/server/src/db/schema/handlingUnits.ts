@@ -13,7 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { batches } from "./inventory";
 import { organizations } from "./organizations";
-import { products } from "./products";
+import { product } from "./products";
 import { uom } from "./uom";
 import { uuidPk } from "./utils";
 import { locations, warehouses } from "./warehouse";
@@ -54,7 +54,7 @@ export const handlingUnitContents = pgTable(
 			.references(() => handlingUnits.id, { onDelete: "cascade" })
 			.notNull(),
 		productId: uuid("product_id")
-			.references(() => products.id, { onDelete: "cascade" })
+			.references(() => product.id, { onDelete: "cascade" })
 			.notNull(),
 		batchId: uuid("batch_id").references(() => batches.id, {
 			onDelete: "set null",

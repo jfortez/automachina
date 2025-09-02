@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { id } from "zod/v4/locales";
 
 const productImage = z.object({
 	url: z.string(),
@@ -29,7 +30,19 @@ export const createProduct = z.object({
 	),
 });
 
-export const createProductCategory = z.object({});
+export const createProductCategory = z.object({
+	organizationId: z.string(),
+	code: z.string(),
+	name: z.string(),
+	description: z.string().optional(),
+});
+
+export const updateProductCategory = createProductCategory
+	.extend({
+		id: z.string(),
+	})
+	.partial({ organizationId: true, code: true, name: true });
 
 export type CreateProductInput = z.infer<typeof createProduct>;
 export type CreateProductCategoryInput = z.infer<typeof createProductCategory>;
+export type UpdateProductCategoryInput = z.infer<typeof updateProductCategory>;

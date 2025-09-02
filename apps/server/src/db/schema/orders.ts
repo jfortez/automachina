@@ -10,7 +10,7 @@ import { customers } from "./customer";
 import { handlingUnits } from "./handlingUnits";
 import { batches } from "./inventory";
 import { organizations } from "./organizations";
-import { products } from "./products";
+import { product } from "./products";
 import { suppliers } from "./suppliers";
 import { uom } from "./uom";
 import { uuidPk } from "./utils";
@@ -41,7 +41,7 @@ export const purchaseOrderLines = pgTable("purchase_order_line", {
 		.references(() => purchaseOrders.id)
 		.notNull(),
 	productId: uuid("product_id")
-		.references(() => products.id)
+		.references(() => product.id)
 		.notNull(),
 	uomCode: text("uom_code")
 		.references(() => uom.code)
@@ -76,7 +76,7 @@ export const salesOrderLines = pgTable("sales_order_line", {
 		.references(() => salesOrders.id)
 		.notNull(),
 	productId: uuid("product_id")
-		.references(() => products.id)
+		.references(() => product.id)
 		.notNull(),
 	uomCode: text("uom_code")
 		.references(() => uom.code)
@@ -95,7 +95,7 @@ export const inventoryReservations = pgTable("inventory_reservation", {
 		() => salesOrderLines.id,
 	),
 	productId: uuid("product_id")
-		.references(() => products.id)
+		.references(() => product.id)
 		.notNull(),
 	batchId: uuid("batch_id").references(() => batches.id),
 	handlingUnitId: uuid("handling_unit_id").references(() => handlingUnits.id),
