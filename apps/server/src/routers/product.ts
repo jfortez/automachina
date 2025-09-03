@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
 	createProduct,
 	createProductCategory,
+	getProductStockSchema,
 	updateProductCategory,
 } from "@/dto/product";
 import { protectedProcedure, publicProcedure, router } from "@/lib/trpc";
@@ -18,6 +19,11 @@ export const productRouter = router({
 	create: protectedProcedure.input(createProduct).mutation(({ input }) => {
 		return productServices.createProduct(input);
 	}),
+	getStock: protectedProcedure
+		.input(getProductStockSchema)
+		.query(({ input }) => {
+			return productServices.getProductStock(input);
+		}),
 	category: router({
 		getAll: publicProcedure.query(productServices.getAllProductCategories),
 		getById: publicProcedure.input(z.string()).query(({ input }) => {

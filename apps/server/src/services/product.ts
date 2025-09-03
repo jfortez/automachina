@@ -1,6 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import type { PgTransaction } from "drizzle-orm/pg-core";
 import { db } from "@/db";
+import { inventoryLedger } from "@/db/schema/inventory";
 import {
 	priceList,
 	productCategory,
@@ -14,6 +16,7 @@ import { uom, uomConversion } from "@/db/schema/uom";
 import type {
 	CreateProductCategoryInput,
 	CreateProductInput,
+	GetProductStockInput,
 	UpdateProductCategoryInput,
 } from "@/dto/product";
 
@@ -73,9 +76,10 @@ const createProduct = async (d: CreateProductInput) => {
 			throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid baseUom" });
 		}
 
-		let productUoms = d.productUoms;
+		let productUoms = d.productUoms || [];
 		const baseUomExists = productUoms.some((pu) => pu.uomCode === d.baseUom);
-		if (!baseUomExists) {
+
+		if (d.isPhysical && !baseUomExists) {
 			productUoms = [
 				...productUoms,
 				{ uomCode: d.baseUom, qtyInBase: "1", isBase: true },
@@ -139,15 +143,17 @@ const createProduct = async (d: CreateProductInput) => {
 
 		const prodId = createdProduct.id;
 
-		// Insert productUoms
-		await tx.insert(productUom).values(
-			productUoms.map((pu) => ({
-				productId: prodId,
-				uomCode: pu.uomCode,
-				qtyInBase: (pu.qtyInBase || 1).toString(),
-				isBase: pu.isBase ?? pu.uomCode === d.baseUom,
-			})),
-		);
+		if (productUoms.length > 0) {
+			// Insert productUoms
+			await tx.insert(productUom).values(
+				productUoms.map((pu) => ({
+					productId: prodId,
+					uomCode: pu.uomCode,
+					qtyInBase: (pu.qtyInBase || 1).toString(),
+					isBase: pu.isBase ?? pu.uomCode === d.baseUom,
+				})),
+			);
+		}
 
 		if (d.images) {
 			await tx.insert(productImages).values(
@@ -253,6 +259,162 @@ const updateProductCategory = async ({
 
 const deleteProductCategory = async (id: string) => {
 	return await db.delete(productCategory).where(eq(productCategory.id, id));
+};
+
+type GetStockArgs = {
+	organizationId?: string;
+	productId: string;
+	warehouseId?: string;
+};
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export const _getStock = async (
+	{ organizationId, productId, warehouseId }: GetStockArgs,
+	tx: Transaction | undefined = undefined,
+) => {
+	// const positiveMovements = ["receipt", "transfer_in", "disassembly_in", "adjustment_pos"];
+	const [stock] = await (tx || db)
+		.select({
+			totalQty: sql<number>`SUM(CASE 
+          WHEN ${inventoryLedger.movementType} IN ('receipt', 'transfer_in', 'adjustment_pos')THEN ${inventoryLedger.qtyInBase} 
+          ELSE -${inventoryLedger.qtyInBase} 
+        END)`,
+		})
+		.from(inventoryLedger)
+		.where(
+			and(
+				eq(inventoryLedger.productId, productId),
+				organizationId
+					? eq(inventoryLedger.organizationId, organizationId)
+					: undefined,
+				warehouseId ? eq(inventoryLedger.warehouseId, warehouseId) : undefined,
+			),
+		);
+
+	return stock;
+};
+
+export const getProductStock = async (d: GetProductStockInput) => {
+	return await db.transaction(async (tx) => {
+		// Validate product exists and is physical
+		const [product] = await tx
+			.select({
+				id: productTable.id,
+				baseUom: productTable.baseUom,
+				isPhysical: productTable.isPhysical,
+			})
+			.from(productTable)
+			.where(
+				sql`${productTable.id} = ${d.productId} AND ${productTable.organizationId} = ${d.organizationId}`,
+			)
+			.limit(1);
+		if (!product) {
+			throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+		}
+		if (!product.isPhysical) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: "Cannot get stock for non-physical products",
+			});
+		}
+
+		const stock = await _getStock(
+			{
+				organizationId: d.organizationId,
+				productId: d.productId,
+				warehouseId: d.warehouseId,
+			},
+			tx,
+		);
+
+		const totalQtyInBase = Number(stock?.totalQty || 0);
+
+		// If uomCode specified, convert to requested UoM
+		let result = { totalQty: totalQtyInBase, uomCode: product.baseUom };
+		if (d.uomCode && d.uomCode !== product.baseUom) {
+			// Validate uomCode
+			const [uomRecord] = await tx
+				.select()
+				.from(uom)
+				.where(eq(uom.code, d.uomCode))
+				.limit(1);
+			if (!uomRecord) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: `Invalid uomCode: ${d.uomCode}`,
+				});
+			}
+
+			// Try productUom first
+			const [productUomRecord] = await tx
+				.select({ qtyInBase: productUom.qtyInBase })
+				.from(productUom)
+				.where(
+					sql`${productUom.productId} = ${d.productId} AND ${productUom.uomCode} = ${d.uomCode}`,
+				)
+				.limit(1);
+
+			if (productUomRecord) {
+				result = {
+					totalQty: totalQtyInBase / Number(productUomRecord.qtyInBase),
+					uomCode: d.uomCode,
+				};
+			} else {
+				// Fallback to uomConversion
+				const [conversion] = await tx
+					.select({ factor: uomConversion.factor })
+					.from(uomConversion)
+					.where(
+						sql`${uomConversion.fromUom} = ${d.uomCode} AND ${uomConversion.toUom} = ${product.baseUom}`,
+					)
+					.limit(1);
+				if (!conversion) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: `No conversion from ${d.uomCode} to ${product.baseUom}`,
+					});
+				}
+				result = {
+					totalQty: totalQtyInBase / Number(conversion.factor),
+					uomCode: d.uomCode,
+				};
+			}
+		}
+
+		// Optional: Express as packages + units for CASO 2 (e.g., 3 PK + 4 EA)
+		let breakdown: { uomCode: string; qty: number }[] | undefined;
+		if (d.uomCode && d.uomCode !== product.baseUom) {
+			const [packageUom] = await tx
+				.select({
+					uomCode: productUom.uomCode,
+					qtyInBase: productUom.qtyInBase,
+				})
+				.from(productUom)
+				.where(
+					sql`${productUom.productId} = ${d.productId} AND ${productUom.uomCode} IN (SELECT ${uom.code} FROM ${uom} WHERE ${uom.isPackaging} = true)`,
+				)
+				.limit(1);
+
+			if (packageUom) {
+				const packages = Math.floor(
+					totalQtyInBase / Number(packageUom.qtyInBase),
+				);
+				const units = totalQtyInBase % Number(packageUom.qtyInBase);
+				breakdown = [
+					{ uomCode: packageUom.uomCode, qty: packages },
+					{ uomCode: product.baseUom, qty: units },
+				];
+			}
+		}
+
+		return {
+			productId: d.productId,
+			totalQty: result.totalQty,
+			uomCode: result.uomCode,
+			breakdown, // Optional: e.g., [{uomCode:"PK", qty:3}, {uomCode:"EA", qty:4}]
+		};
+	});
 };
 
 export {

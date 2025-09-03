@@ -49,7 +49,7 @@ export const createProduct = z.object({
 	attributes: recordSchema.optional(), //FOR LLM/ Semantic Search eg. Store tags, labels, colors, weights, etc. as JSON (e.g., { tags: ["Plomeria", "Roscable"], sizeOptions: ["1/2", "3/4"] })
 	perishable: z.boolean().default(false),
 	shelfLifeDays: z.number().int().positive().optional(),
-	productUoms: z.array(productUom).min(1),
+	productUoms: z.array(productUom).optional(),
 	isPhysical: z.boolean().default(true),
 	productFamilyId: z.string().optional(), // Link to family for variations (e.g., different sizes of the same product)
 	suggestedRetailPrice: z.string().optional(), // Base suggested price (in base UoM)
@@ -71,6 +71,15 @@ export const updateProductCategory = createProductCategory
 		id: z.string(),
 	})
 	.partial({ organizationId: true, code: true, name: true });
+
+export const getProductStockSchema = z.object({
+	organizationId: z.string(),
+	productId: z.string(),
+	warehouseId: z.string().optional(),
+	uomCode: z.string().min(1).optional(), // Optional: return stock in this UoM
+});
+
+export type GetProductStockInput = z.infer<typeof getProductStockSchema>;
 
 export type CreateProductInput = z.infer<typeof createProduct>;
 export type CreateProductCategoryInput = z.infer<typeof createProductCategory>;

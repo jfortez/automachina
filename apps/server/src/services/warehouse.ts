@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { organizations } from "@/db/schema/organizations";
@@ -23,6 +24,13 @@ const getWarehouseByOrg = async (orgId: string) => {
 		.from(warehouses)
 		.innerJoin(organizations, eq(warehouses.organizationId, organizations.id))
 		.where(eq(warehouses.organizationId, orgId));
+
+	if (!warehousesByOrg[0])
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Warehouse not found",
+		});
+
 	return warehousesByOrg;
 };
 

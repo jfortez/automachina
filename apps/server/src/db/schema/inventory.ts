@@ -6,6 +6,7 @@ import {
 	index,
 	jsonb,
 	numeric,
+	pgEnum,
 	pgTable,
 	text,
 	timestamp,
@@ -60,6 +61,20 @@ export const inventoryLedger = pgTable(
 			.defaultNow()
 			.notNull(),
 		movementType: text("movement_type").notNull(),
+		// movementType: pgEnum("movement_type", [
+		//   "receipt",
+		//   "issue",
+		//   "transfer_in",
+		//   "transfer_out",
+		//   "adjustment_pos",
+		//   "adjustment_neg",
+		//   "assembly_in",
+		//   "assembly_out",
+		//   "disassembly_in",
+		//   "disassembly_out",
+		//   "cycle_count",
+		//   "correction",
+		// ]),
 		productId: uuid("product_id")
 			.notNull()
 			.references(() => product.id, { onDelete: "restrict" }),

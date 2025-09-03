@@ -5,6 +5,7 @@ import {
 	router,
 } from "../lib/trpc";
 import { customerRouter } from "./customer";
+import { inventoryRouter } from "./inventory";
 import { orgRouter } from "./organization";
 import { productRouter } from "./product";
 import { supplierRouter } from "./supplier";
@@ -29,6 +30,7 @@ export const appRouter = router({
 	product: productRouter,
 	uom: uomRouter,
 	customer: customerRouter,
+	inventory: inventoryRouter,
 });
 
 export const createCaller = createCallerFactory(appRouter);

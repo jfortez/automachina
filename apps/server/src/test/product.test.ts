@@ -1,99 +1,61 @@
 import { faker } from "@faker-js/faker";
 import type { inferProcedureInput } from "@trpc/server";
-import type { Session } from "better-auth";
+
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { productCategory, productUom } from "@/db/schema/products";
-import { auth } from "@/lib/auth";
+import { productUom } from "@/db/schema/products";
 import type { AppRouter } from "@/routers";
-import { createCaller } from "@/routers";
+import { setupTestContext } from "./util";
 
 describe("Testing Product Route", () => {
-	let caller: ReturnType<typeof createCaller>;
-	let firstOrg: NonNullable<
-		Awaited<ReturnType<typeof db.query.organizations.findFirst>>
-	>;
-	let categoryId: string;
+	let ctx: Awaited<ReturnType<typeof setupTestContext>>;
 
-	beforeEach(async () => {
-		const session = await auth.api.signInEmail({
-			body: { email: "rylan_reichel@yahoo.com", password: "password" },
-			returnHeaders: true,
-		});
-
-		caller = createCaller({
-			session: {
-				user: session.response.user,
-				session: {} as Session,
-			},
-		});
-
-		// Obtén la organización
-		const org = await db.query.organizations.findFirst();
-		if (!org) {
-			throw new Error("No organization found");
-		}
-		firstOrg = org;
-
-		const firstCategory = await db.query.productCategory.findFirst();
-		if (!firstCategory) {
-			const [createdCategory] = await db
-				.insert(productCategory)
-				.values({
-					code: "GENERAL",
-					name: "General",
-					organizationId: firstOrg.id,
-				})
-				.returning();
-			categoryId = createdCategory.id;
-		} else {
-			categoryId = firstCategory.id;
-		}
+	beforeAll(async () => {
+		ctx = await setupTestContext();
 	});
-
 	describe("testing product category route", () => {
 		it("get all categories", async () => {
-			const categories = await caller.product.category.getAll();
+			const categories = await ctx.caller.product.category.getAll();
 			expect(categories).toBeTruthy();
 		});
 
 		it("get category by code", async () => {
-			const category = await caller.product.category.getByCode("GENERAL");
+			const category = await ctx.caller.product.category.getByCode("public");
 			expect(category).toBeTruthy();
-			expect(category).toHaveProperty("code", "GENERAL");
+			expect(category).toHaveProperty("code", "public");
 		});
 
 		it.sequential("create a category", async () => {
 			const newCategory = {
 				code: "NEW_CATEGORY",
 				name: "New Category",
-				organizationId: firstOrg.id,
+				organizationId: ctx.defaultOrg.id,
 			};
 			const [createdCategory] =
-				await caller.product.category.create(newCategory);
+				await ctx.caller.product.category.create(newCategory);
 			expect(createdCategory).toBeTruthy();
 			expect(createdCategory).toHaveProperty("code", newCategory.code);
 		});
 
 		it.sequential("update a category", async () => {
 			const categoryToUpdate =
-				await caller.product.category.getByCode("NEW_CATEGORY");
+				await ctx.caller.product.category.getByCode("NEW_CATEGORY");
 
 			if (!categoryToUpdate) {
 				throw new Error("Category not found");
 			}
 			const { id } = categoryToUpdate;
 
-			await caller.product.category.update({
+			await ctx.caller.product.category.update({
 				id: id,
 				code: "UPDATED_CATEGORY",
 				name: "Updated Category",
 				description: "this category was updated",
 			});
 
-			const categoryUpdated = await caller.product.category.getById(id);
+			const categoryUpdated = await ctx.caller.product.category.getById(id);
 
 			expect(categoryUpdated).toBeTruthy();
 			expect(categoryUpdated).toHaveProperty("code", "UPDATED_CATEGORY");
@@ -102,15 +64,15 @@ describe("Testing Product Route", () => {
 
 		it.sequential("delete a category", async () => {
 			const categoryToDelete =
-				await caller.product.category.getByCode("UPDATED_CATEGORY");
+				await ctx.caller.product.category.getByCode("UPDATED_CATEGORY");
 
 			if (!categoryToDelete) {
 				throw new Error("Category not found");
 			}
 
-			await caller.product.category.delete(categoryToDelete.id);
+			await ctx.caller.product.category.delete(categoryToDelete.id);
 
-			const deletedCategory = await caller.product.category.getById(
+			const deletedCategory = await ctx.caller.product.category.getById(
 				categoryToDelete.id,
 			);
 			expect(deletedCategory).toBeFalsy();
@@ -140,12 +102,12 @@ describe("Testing Product Route", () => {
 			attributes: {
 				foo: "bar",
 			},
-			organizationId: firstOrg.id,
-			categoryId: categoryId,
+			organizationId: ctx.defaultOrg.id,
+			categoryId: ctx.defaultCategoryId,
 			trackingLevel: "none",
 		};
 
-		const createdProduct = await caller.product.create(input);
+		const createdProduct = await ctx.caller.product.create(input);
 
 		expect(createdProduct).toBeTruthy();
 	});
@@ -161,11 +123,11 @@ describe("Testing Product Route", () => {
 					uomCode: "PK",
 				},
 			],
-			organizationId: firstOrg.id,
-			categoryId: categoryId,
+			organizationId: ctx.defaultOrg.id,
+			categoryId: ctx.defaultCategoryId,
 		};
 
-		const createdProduct = await caller.product.create(input);
+		const createdProduct = await ctx.caller.product.create(input);
 
 		const pu = await db.query.productUom.findMany({
 			where: eq(productUom.productId, createdProduct.id),
@@ -184,5 +146,76 @@ describe("Testing Product Route", () => {
 				isBase: true,
 			},
 		]);
+	});
+
+	it("create a product without productUoms", async () => {
+		const input: inferProcedureInput<AppRouter["product"]["create"]> = {
+			baseUom: "EA",
+			name: faker.commerce.productName(),
+			description: faker.commerce.productDescription(),
+			sku: nanoid(10),
+			organizationId: ctx.defaultOrg.id,
+			categoryId: ctx.defaultCategoryId,
+		};
+
+		const createdProduct = await ctx.caller.product.create(input);
+
+		expect(createdProduct).toBeTruthy();
+		expect(createdProduct).toMatchObject({
+			baseUom: "EA",
+			isPhysical: true,
+		});
+
+		const pu = await db.query.productUom.findMany({
+			where: eq(productUom.productId, createdProduct.id),
+		});
+
+		expect(pu).toBeTruthy();
+		expect(pu).toMatchObject([
+			{
+				uomCode: "EA",
+				qtyInBase: "1.000000000",
+				isBase: true,
+			},
+		]);
+	});
+
+	it("Create a product with no stock (like service)", async () => {
+		const input: inferProcedureInput<AppRouter["product"]["create"]> = {
+			baseUom: "EA",
+			name: "THIS IS A SERVICE",
+			description: "THIS IS A SERVICE PRODUCT",
+			sku: nanoid(10),
+			organizationId: ctx.defaultOrg.id,
+			categoryId: ctx.defaultCategoryId,
+			isPhysical: false,
+		};
+
+		const createdProduct = await ctx.caller.product.create(input);
+
+		expect(createdProduct).toBeTruthy();
+		expect(createdProduct).toMatchObject({
+			baseUom: "EA",
+			isPhysical: false,
+		});
+
+		const pu = await db.query.productUom.findMany({
+			where: eq(productUom.productId, createdProduct.id),
+		});
+
+		expect(pu).toEqual([]);
+		expect(pu).toHaveLength(0);
+	});
+
+	it("get product stock", async () => {
+		const stock = await ctx.caller.product.getStock({
+			organizationId: ctx.defaultOrg.id,
+			productId: "59b0e679-03a8-4115-ae31-b2dd085f1f8a",
+			warehouseId: "d5f9b48d-d107-4a9b-a25a-61698f2a0fb4",
+		});
+
+		console.log(stock);
+
+		expect(stock).toBeTruthy();
 	});
 });

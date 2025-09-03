@@ -1,34 +1,32 @@
 import type { inferProcedureInput } from "@trpc/server";
-import { expect, test } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/db";
-import { auth } from "@/lib/auth";
-import { createContextInner } from "@/lib/context";
 import type { AppRouter } from "@/routers";
-import { createCaller } from "@/routers";
+import { setupTestContext } from "./util";
 
-test("create customer and validate if exists", async () => {
-	const session = await auth.api.signInEmail({
-		body: { email: "rylan_reichel@yahoo.com", password: "password" },
-		returnHeaders: true,
+describe("test customer router", async () => {
+	let ctx: Awaited<ReturnType<typeof setupTestContext>>;
+
+	beforeAll(async () => {
+		ctx = await setupTestContext();
 	});
 
-	const ctx = await createContextInner({ headers: session.headers });
-	const caller = createCaller(ctx);
+	it("should create a customer", async () => {
+		const firstOrg = await db.query.organizations.findFirst();
+		if (!firstOrg) {
+			throw new Error("No organization found");
+		}
 
-	const firstOrg = await db.query.organizations.findFirst();
-	if (!firstOrg) {
-		throw new Error("No organization found");
-	}
+		const input: inferProcedureInput<AppRouter["customer"]["create"]> = {
+			code: "foobar",
+			name: "Foobar",
+			organizationId: firstOrg.id,
+		};
 
-	const input: inferProcedureInput<AppRouter["customer"]["create"]> = {
-		code: "foobar",
-		name: "Foobar",
-		organizationId: firstOrg.id,
-	};
+		const [createdCustomer] = await ctx.caller.customer.create(input);
 
-	const [createdCustomer] = await caller.customer.create(input);
+		const customerById = await ctx.caller.customer.getById(createdCustomer.id);
 
-	const customerById = await caller.customer.getById(createdCustomer.id);
-
-	expect(customerById).toMatchObject(input);
+		expect(customerById).toMatchObject(input);
+	});
 });
