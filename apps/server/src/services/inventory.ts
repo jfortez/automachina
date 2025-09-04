@@ -75,8 +75,9 @@ export const receiveInventory = async (d: ReceiveInventoryInput) => {
 		return { success: true, productId: d.productId, qtyInBase };
 	});
 };
-
-export const sellProduct = async (d: SellProductInput) => {
+export const sellProduct = async (
+	d: SellProductInput & { returnTotalQty?: boolean },
+) => {
 	return await db.transaction(async (tx) => {
 		// Get product details
 		const [prod] = await tx
@@ -93,8 +94,9 @@ export const sellProduct = async (d: SellProductInput) => {
 			});
 		}
 
-		// Calculate total qtyInBase to sell
+		// Calculate total qtyInBase to sell and store conversions
 		let totalQtyToSellInBase = 0;
+		const lineConversions: { [key: string]: number } = {};
 		for (const line of d.lines) {
 			let lineQtyInBase = line.qty;
 			if (line.uomCode !== prod.baseUom) {
@@ -108,6 +110,7 @@ export const sellProduct = async (d: SellProductInput) => {
 
 				if (productUomRecord) {
 					lineQtyInBase = line.qty * Number(productUomRecord.qtyInBase);
+					lineConversions[line.uomCode] = Number(productUomRecord.qtyInBase);
 				} else {
 					const [conversion] = await tx
 						.select({ factor: uomConversion.factor })
@@ -123,7 +126,10 @@ export const sellProduct = async (d: SellProductInput) => {
 						});
 					}
 					lineQtyInBase = line.qty * Number(conversion.factor);
+					lineConversions[line.uomCode] = Number(conversion.factor);
 				}
+			} else {
+				lineConversions[line.uomCode] = 1;
 			}
 			totalQtyToSellInBase += lineQtyInBase;
 		}
@@ -137,7 +143,6 @@ export const sellProduct = async (d: SellProductInput) => {
 			},
 			tx,
 		);
-
 		const currentStockInBase = Number(stock?.totalQty || 0);
 
 		if (currentStockInBase < totalQtyToSellInBase) {
@@ -151,40 +156,36 @@ export const sellProduct = async (d: SellProductInput) => {
 				.limit(1);
 
 			if (packageUom) {
-				// Assume one package to unpack for simplicity; calculate needed packages
 				const packagesNeeded = Math.ceil(
 					unpackQtyNeeded / Number(packageUom.qtyInBase),
 				);
-				// Check available packages (simplified: assume enough via handlingUnits)
-				const [handlingUnit] = await tx
-					.select()
+				const availablePackages = await tx
+					.select({ count: sql`COUNT(*)` })
 					.from(handlingUnits)
 					.where(
 						sql`${handlingUnits.uomCode} = ${packageUom.uomCode} AND ${handlingUnits.organizationId} = ${d.organizationId}`,
-					)
-					.limit(packagesNeeded);
+					);
 
-				if (handlingUnit) {
-					// Unpack: Register disassembly
+				if (Number(availablePackages[0].count) >= packagesNeeded) {
+					const qtyToUnpack = packagesNeeded * Number(packageUom.qtyInBase);
+
 					await tx.insert(inventoryLedger).values([
 						{
 							organizationId: d.organizationId,
 							productId: d.productId,
 							movementType: "disassembly_out",
-							qtyInBase: (
-								packagesNeeded * Number(packageUom.qtyInBase)
-							).toString(),
+							qtyInBase: qtyToUnpack.toString(), // Positivo
 							uomCode: packageUom.uomCode,
+							qtyInUom: packagesNeeded.toString(),
 							occurredAt: new Date(),
 						},
 						{
 							organizationId: d.organizationId,
 							productId: d.productId,
 							movementType: "disassembly_in",
-							qtyInBase: (
-								packagesNeeded * Number(packageUom.qtyInBase)
-							).toString(),
+							qtyInBase: qtyToUnpack.toString(), // Positivo
 							uomCode: prod.baseUom,
+							qtyInUom: qtyToUnpack.toString(),
 							occurredAt: new Date(),
 						},
 					]);
@@ -197,30 +198,48 @@ export const sellProduct = async (d: SellProductInput) => {
 			} else {
 				throw new TRPCError({
 					code: "BAD_REQUEST",
-					message: "Insufficient stock",
+					message: "Insufficient stock and no packages available",
 				});
 			}
 		}
 
-		// Register sales (issue) for each line
+		// Register sales (issue) for each line with positive qtyInBase
 		for (const line of d.lines) {
-			let lineQtyInBase = line.qty;
-			if (line.uomCode !== prod.baseUom) {
-				// Reuse conversion logic (simplified)
-				lineQtyInBase = line.qty /* factor from earlier */;
-			}
+			const lineQtyInBase = line.qty * (lineConversions[line.uomCode] || 1);
+
 			await tx.insert(inventoryLedger).values({
 				organizationId: d.organizationId,
 				occurredAt: new Date(),
 				movementType: "issue",
 				productId: d.productId,
 				warehouseId: d.warehouseId,
-				qtyInBase: lineQtyInBase.toString(),
+				qtyInBase: lineQtyInBase.toString(), // Positivo
 				uomCode: line.uomCode,
 				qtyInUom: line.qty.toString(),
 			});
 		}
 
-		return { success: true, productId: d.productId };
+		const result = {
+			success: true,
+			productId: d.productId,
+			uomCode: prod.baseUom,
+			totalQty: 0,
+		};
+
+		if (d.returnTotalQty) {
+			const updatedStock = await _getStock(
+				{
+					organizationId: d.organizationId,
+					productId: d.productId,
+					warehouseId: d.warehouseId,
+				},
+				tx,
+			);
+			result.totalQty = Number(updatedStock?.totalQty || 0);
+		} else {
+			delete (result as Partial<typeof result>).totalQty;
+		}
+
+		return result;
 	});
 };

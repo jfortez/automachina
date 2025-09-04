@@ -273,13 +273,19 @@ export const _getStock = async (
 	{ organizationId, productId, warehouseId }: GetStockArgs,
 	tx: Transaction | undefined = undefined,
 ) => {
-	// const positiveMovements = ["receipt", "transfer_in", "disassembly_in", "adjustment_pos"];
 	const [stock] = await (tx || db)
 		.select({
-			totalQty: sql<number>`SUM(CASE 
-          WHEN ${inventoryLedger.movementType} IN ('receipt', 'transfer_in', 'adjustment_pos')THEN ${inventoryLedger.qtyInBase} 
-          ELSE -${inventoryLedger.qtyInBase} 
-        END)`,
+			totalQty: sql<number>`COALESCE(SUM(
+        CASE 
+          WHEN ${inventoryLedger.movementType} IN ('receipt', 'transfer_in', 'disassembly_in', 'adjustment_pos') THEN CAST(${inventoryLedger.qtyInBase} AS numeric)
+          WHEN ${inventoryLedger.movementType} IN ('issue', 'transfer_out', 'disassembly_out', 'adjustment_neg') THEN -CAST(${inventoryLedger.qtyInBase} AS numeric)
+          ELSE 0
+        END
+      ), 0)`,
+			receiptQty: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryLedger.movementType} = 'receipt' THEN CAST(${inventoryLedger.qtyInBase} AS numeric) ELSE 0 END), 0)`,
+			issueQty: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryLedger.movementType} = 'issue' THEN CAST(${inventoryLedger.qtyInBase} AS numeric) ELSE 0 END), 0)`,
+			disassemblyInQty: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryLedger.movementType} = 'disassembly_in' THEN CAST(${inventoryLedger.qtyInBase} AS numeric) ELSE 0 END), 0)`,
+			disassemblyOutQty: sql<number>`COALESCE(SUM(CASE WHEN ${inventoryLedger.movementType} = 'disassembly_out' THEN -CAST(${inventoryLedger.qtyInBase} AS numeric) ELSE 0 END), 0)`,
 		})
 		.from(inventoryLedger)
 		.where(
