@@ -57,7 +57,7 @@ describe("Testing  Inventory for default uom_conversion", () => {
 
 		expect(createdInventory).toMatchObject({
 			success: true,
-			qtyInBase: 36,
+			qtyInBase: 36, // 6(PK) * (uom_conversion = 6) = 36
 		});
 	});
 
@@ -67,11 +67,12 @@ describe("Testing  Inventory for default uom_conversion", () => {
 			warehouseId: globals.id,
 			productId: productId,
 			lines: [
-				{ qty: 1, uomCode: "PK" },
-				{ qty: 8, uomCode: "EA" },
-			],
+				{ qty: 1, uomCode: "PK" }, //6
+				{ qty: 8, uomCode: "EA" }, //8
+			], //14
 		};
 
+		// 36 - 14 = 22
 		const createdSell = await ctx.caller.inventory.sell(sellInput);
 
 		expect(createdSell).toMatchObject({
@@ -85,12 +86,12 @@ describe("Testing  Inventory for default uom_conversion", () => {
 		});
 
 		expect(stock).toMatchObject({
-			totalQty: 27,
+			totalQty: 36 - 14,
 			uomCode: "EA",
 		});
 	});
 
-	it.fails.sequential(
+	it.sequential.fails(
 		"should fail when selling more than available",
 		async () => {
 			const sellInput: inferProcedureInput<AppRouter["inventory"]["sell"]> = {
@@ -190,8 +191,6 @@ describe("Testing  Inventory using productUom", () => {
 			productId: productId,
 			warehouseId: globals.id,
 		});
-
-		console.log(stock);
 
 		expect(stock).toMatchObject({
 			totalQty: 12,

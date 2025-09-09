@@ -1,6 +1,6 @@
 import type { inferProcedureInput } from "@trpc/server";
+import { nanoid } from "nanoid";
 import { beforeAll, describe, expect, it } from "vitest";
-import { db } from "@/db";
 import type { AppRouter } from "@/routers";
 import { setupTestContext } from "./util";
 
@@ -12,15 +12,10 @@ describe("test customer router", async () => {
 	});
 
 	it("should create a customer", async () => {
-		const firstOrg = await db.query.organizations.findFirst();
-		if (!firstOrg) {
-			throw new Error("No organization found");
-		}
-
 		const input: inferProcedureInput<AppRouter["customer"]["create"]> = {
-			code: "foobar",
+			code: nanoid(10),
 			name: "Foobar",
-			organizationId: firstOrg.id,
+			organizationId: ctx.defaultOrg.id,
 		};
 
 		const [createdCustomer] = await ctx.caller.customer.create(input);

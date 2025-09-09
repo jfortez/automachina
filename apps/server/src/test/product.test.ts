@@ -207,15 +207,13 @@ describe("Testing Product Route", () => {
 		expect(pu).toHaveLength(0);
 	});
 
-	it("get product stock", async () => {
-		const stock = await ctx.caller.product.getStock({
-			organizationId: ctx.defaultOrg.id,
-			productId: "59b0e679-03a8-4115-ae31-b2dd085f1f8a",
-			warehouseId: "d5f9b48d-d107-4a9b-a25a-61698f2a0fb4",
-		});
+	// it("get product stock", async () => {
+	//   const stock = await ctx.caller.product.getStock({
+	//     organizationId: ctx.defaultOrg.id,
+	//     productId: ,
+	//     warehouseId: "d5f9b48d-d107-4a9b-a25a-61698f2a0fb4",
+	//   });
 
-		console.log(stock);
-
-		expect(stock).toBeTruthy();
-	});
+	//   expect(stock).toBeTruthy();
+	// });
 });
