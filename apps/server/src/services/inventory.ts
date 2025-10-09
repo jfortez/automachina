@@ -12,79 +12,70 @@ import type {
 } from "@/dto/inventory";
 import type { Transaction } from "@/types";
 import { _getStock } from "./product";
+import { convertUomToBase } from "./uom";
 
 /**
- * Converts quantity from given UoM to product's base UoM
+ * Validates product exists and is physical, returns basic product data
  * @param tx Database transaction
- * @param productId Product ID to get conversions for
- * @param qty Quantity in the given UoM
- * @param uomCode UoM code to convert from
- * @param productBaseUom Base UoM of the product (used for validation)
- * @returns Quantity converted to base UoM
+ * @param productId Product ID to validate
+ * @returns Product basic data or throws error
  */
-const _convertUomToBase = async (
-	tx: Transaction,
-	productId: string,
-	qty: number,
-	uomCode: string,
-	productBaseUom: string,
-): Promise<number> => {
-	// If already in base UoM, return as-is
-	if (uomCode === productBaseUom) {
-		return qty;
+const _validatePhysicalProduct = async (tx: Transaction, productId: string) => {
+	const [prod] = await tx
+		.select({
+			id: productTable.id,
+			baseUom: productTable.baseUom,
+			isPhysical: productTable.isPhysical,
+		})
+		.from(productTable)
+		.where(eq(productTable.id, productId));
+
+	if (!prod) {
+		throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
 	}
-
-	// Prioritize productUom (product-specific conversions)
-	const [productUomRecord] = await tx
-		.select({ qtyInBase: productUom.qtyInBase })
-		.from(productUom)
-		.where(
-			sql`${productUom.productId} = ${productId} AND ${productUom.uomCode} = ${uomCode}`,
-		)
-		.limit(1);
-
-	if (productUomRecord) {
-		return qty * Number(productUomRecord.qtyInBase);
-	}
-
-	// Fallback to uomConversion (global standard conversions)
-	const [conversion] = await tx
-		.select({ factor: uomConversion.factor })
-		.from(uomConversion)
-		.where(
-			sql`${uomConversion.fromUom} = ${uomCode} AND ${uomConversion.toUom} = ${productBaseUom}`,
-		)
-		.limit(1);
-
-	if (!conversion) {
+	if (!prod.isPhysical) {
 		throw new TRPCError({
 			code: "BAD_REQUEST",
-			message: `No conversion from ${uomCode} to ${productBaseUom}`,
+			message: "Cannot operate on non-physical products",
 		});
 	}
 
-	return qty * Number(conversion.factor);
+	return prod;
+};
+
+/**
+ * Standardizes inventory ledger insertion
+ * @param tx Database transaction
+ * @param entryData Ledger entry data (without occurredAt which is auto-generated)
+ * @returns Insert result
+ */
+const _insertLedgerEntry = async (
+	tx: Transaction,
+	entryData: {
+		organizationId: string;
+		movementType: string;
+		productId: string;
+		warehouseId?: string;
+		qtyInBase: string;
+		uomCode?: string;
+		qtyInUom?: string;
+		note?: string | null;
+		unitCost?: string;
+		currency?: string;
+	},
+) => {
+	return await tx.insert(inventoryLedger).values({
+		...entryData,
+		occurredAt: new Date(),
+	});
 };
 
 export const receiveInventory = async (d: ReceiveInventoryInput) => {
 	return await db.transaction(async (tx) => {
-		// Get product details
-		const [prod] = await tx
-			.select()
-			.from(productTable)
-			.where(eq(productTable.id, d.productId));
-		if (!prod) {
-			throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
-		}
-		if (!prod.isPhysical) {
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: "Cannot receive inventory for non-physical products",
-			});
-		}
+		// Validate product exists and is physical
+		const prod = await _validatePhysicalProduct(tx, d.productId);
 
-		// Convert qty to baseUom using helper function
-		const qtyInBase = await _convertUomToBase(
+		const qtyInBase = await convertUomToBase(
 			tx,
 			d.productId,
 			d.qty,
@@ -92,10 +83,9 @@ export const receiveInventory = async (d: ReceiveInventoryInput) => {
 			prod.baseUom,
 		);
 
-		// Insert receipt in inventory_ledger
-		await tx.insert(inventoryLedger).values({
+		// Insert receipt in inventory_ledger using helper
+		await _insertLedgerEntry(tx, {
 			organizationId: d.organizationId,
-			occurredAt: new Date(),
 			movementType: "receipt",
 			productId: d.productId,
 			warehouseId: d.warehouseId,
@@ -113,26 +103,14 @@ export const sellProduct = async (
 	d: SellProductInput & { returnTotalQty?: boolean },
 ) => {
 	return await db.transaction(async (tx) => {
-		// Get product details
-		const [prod] = await tx
-			.select()
-			.from(productTable)
-			.where(eq(productTable.id, d.productId));
-		if (!prod) {
-			throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
-		}
-		if (!prod.isPhysical) {
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: "Cannot sell non-physical products",
-			});
-		}
+		// Validate product exists and is physical
+		const prod = await _validatePhysicalProduct(tx, d.productId);
 
 		// Calculate total qtyInBase to sell using helper function
 		let totalQtyToSellInBase = 0;
 		const lineConversions: { [key: string]: number } = {};
 		for (const line of d.lines) {
-			const lineQtyInBase = await _convertUomToBase(
+			const lineQtyInBase = await convertUomToBase(
 				tx,
 				d.productId,
 				line.qty,
@@ -180,26 +158,22 @@ export const sellProduct = async (
 				if (Number(availablePackages[0].count) >= packagesNeeded) {
 					const qtyToUnpack = packagesNeeded * Number(packageUom.qtyInBase);
 
-					await tx.insert(inventoryLedger).values([
-						{
-							organizationId: d.organizationId,
-							productId: d.productId,
-							movementType: "disassembly_out",
-							qtyInBase: qtyToUnpack.toString(), // Positivo
-							uomCode: packageUom.uomCode,
-							qtyInUom: packagesNeeded.toString(),
-							occurredAt: new Date(),
-						},
-						{
-							organizationId: d.organizationId,
-							productId: d.productId,
-							movementType: "disassembly_in",
-							qtyInBase: qtyToUnpack.toString(), // Positivo
-							uomCode: prod.baseUom,
-							qtyInUom: qtyToUnpack.toString(),
-							occurredAt: new Date(),
-						},
-					]);
+					await _insertLedgerEntry(tx, {
+						organizationId: d.organizationId,
+						productId: d.productId,
+						movementType: "disassembly_out",
+						qtyInBase: qtyToUnpack.toString(),
+						uomCode: packageUom.uomCode,
+						qtyInUom: packagesNeeded.toString(),
+					});
+					await _insertLedgerEntry(tx, {
+						organizationId: d.organizationId,
+						productId: d.productId,
+						movementType: "disassembly_in",
+						qtyInBase: qtyToUnpack.toString(),
+						uomCode: prod.baseUom,
+						qtyInUom: qtyToUnpack.toString(),
+					});
 				} else {
 					throw new TRPCError({
 						code: "BAD_REQUEST",
@@ -218,13 +192,12 @@ export const sellProduct = async (
 		for (const line of d.lines) {
 			const lineQtyInBase = line.qty * (lineConversions[line.uomCode] || 1);
 
-			await tx.insert(inventoryLedger).values({
+			await _insertLedgerEntry(tx, {
 				organizationId: d.organizationId,
-				occurredAt: new Date(),
-				movementType: "issue",
 				productId: d.productId,
 				warehouseId: d.warehouseId,
-				qtyInBase: lineQtyInBase.toString(), // Positivo
+				movementType: "issue",
+				qtyInBase: lineQtyInBase.toString(),
 				uomCode: line.uomCode,
 				qtyInUom: line.qty.toString(),
 			});
@@ -257,23 +230,11 @@ export const sellProduct = async (
 
 export const adjustInventory = async (d: AdjustInventoryInput) => {
 	return await db.transaction(async (tx) => {
-		// Get product details
-		const [prod] = await tx
-			.select()
-			.from(productTable)
-			.where(eq(productTable.id, d.productId));
-		if (!prod) {
-			throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
-		}
-		if (!prod.isPhysical) {
-			throw new TRPCError({
-				code: "BAD_REQUEST",
-				message: "Cannot adjust inventory for non-physical products",
-			});
-		}
+		// Validate product exists and is physical
+		const prod = await _validatePhysicalProduct(tx, d.productId);
 
 		// Convert qty to baseUom using helper function
-		const qtyInBase = await _convertUomToBase(
+		const qtyInBase = await convertUomToBase(
 			tx,
 			d.productId,
 			d.qty,
@@ -301,7 +262,7 @@ export const adjustInventory = async (d: AdjustInventoryInput) => {
 			}
 		}
 
-		// Insert adjustment in inventory_ledger
+		// Insert adjustment in inventory_ledger using helper
 		const movementType =
 			d.adjustmentType === "pos" ? "adjustment_pos" : "adjustment_neg";
 
@@ -314,12 +275,11 @@ export const adjustInventory = async (d: AdjustInventoryInput) => {
 			.filter(Boolean)
 			.join(" | ");
 
-		await tx.insert(inventoryLedger).values({
+		await _insertLedgerEntry(tx, {
 			organizationId: d.organizationId,
-			occurredAt: new Date(),
-			movementType,
 			productId: d.productId,
 			warehouseId: d.warehouseId,
+			movementType,
 			qtyInBase: qtyInBase.toString(),
 			uomCode: d.uomCode,
 			qtyInUom: d.qty.toString(),

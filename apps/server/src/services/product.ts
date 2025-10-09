@@ -20,6 +20,7 @@ import type {
 	UpdateProductCategoryInput,
 } from "@/dto/product";
 import type { Transaction } from "@/types";
+import { getUomConversionFactor } from "./uom";
 
 const getAllProducts = async () => {
 	const allProducts = await db.query.product.findMany({
@@ -336,53 +337,17 @@ export const getProductStock = async (d: GetProductStockInput) => {
 
 		let result = { totalQty: totalQtyInBase, uomCode: product.baseUom };
 		if (d.uomCode && d.uomCode !== product.baseUom) {
-			const [uomRecord] = await tx
-				.select()
-				.from(uom)
-				.where(eq(uom.code, d.uomCode))
-				.limit(1);
-			if (!uomRecord) {
-				throw new TRPCError({
-					code: "BAD_REQUEST",
-					message: `Invalid uomCode: ${d.uomCode}`,
-				});
-			}
+			const factor = await getUomConversionFactor(
+				tx,
+				d.productId,
+				product.baseUom, // from base UoM
+				d.uomCode, // to target UoM
+			);
 
-			const [productUomRecord] = await tx
-				.select({ qtyInBase: productUom.qtyInBase })
-				.from(productUom)
-				.where(
-					sql`${productUom.productId} = ${d.productId} AND ${productUom.uomCode} = ${d.uomCode}`,
-				)
-				.limit(1);
-
-			if (productUomRecord) {
-				result = {
-					totalQty: Math.floor(
-						totalQtyInBase / Number(productUomRecord.qtyInBase),
-					),
-					uomCode: d.uomCode,
-				};
-			} else {
-				// Fallback to uomConversion
-				const [conversion] = await tx
-					.select({ factor: uomConversion.factor })
-					.from(uomConversion)
-					.where(
-						sql`${uomConversion.fromUom} = ${d.uomCode} AND ${uomConversion.toUom} = ${product.baseUom}`,
-					)
-					.limit(1);
-				if (!conversion) {
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message: `No conversion from ${d.uomCode} to ${product.baseUom}`,
-					});
-				}
-				result = {
-					totalQty: Math.floor(totalQtyInBase / Number(conversion.factor)),
-					uomCode: d.uomCode,
-				};
-			}
+			result = {
+				totalQty: Math.floor(totalQtyInBase / factor),
+				uomCode: d.uomCode,
+			};
 		}
 
 		// Optional: Express as packages + units for CASO 2 (e.g., 3 PK + 4 EA)
