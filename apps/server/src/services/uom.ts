@@ -1,24 +1,34 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { productUom } from "@/db/schema/products";
+import { product, productUom } from "@/db/schema/products";
 import { uom, uomConversion } from "@/db/schema/uom";
 import type {
 	CreateUomConversionInput,
 	CreateUomInput,
+	CreateUomWithConversionsInput,
+	DeactivateUomInput,
+	GetUomOptionsInput,
 	UpdateUomConversionInput,
 	UpdateUomInput,
 } from "@/dto/uom";
 import type { Transaction } from "@/types";
 
-export const getAllUom = async () => {
-	const allUom = await db.query.uom.findMany();
+export const getAllUom = async (includeInactive = false) => {
+	const whereClause = includeInactive ? undefined : eq(uom.isActive, true);
+	const allUom = await db.query.uom.findMany({
+		where: whereClause,
+	});
 	return allUom;
 };
 
-export const getUomByCode = async (code: string) => {
+export const getUomByCode = async (code: string, includeInactive = false) => {
+	const whereClause = includeInactive
+		? eq(uom.code, code)
+		: and(eq(uom.code, code), eq(uom.isActive, true));
+
 	const uomItem = await db.query.uom.findFirst({
-		where: eq(uom.code, code),
+		where: whereClause,
 	});
 	return uomItem;
 };
@@ -295,7 +305,7 @@ export const createUomConversion = async (input: CreateUomConversionInput) => {
 		}
 
 		return newConversion[0];
-	} catch (error) {
+	} catch {
 		// Handle unique constraint violation or other database errors
 		throw new TRPCError({
 			code: "INTERNAL_SERVER_ERROR",
@@ -360,4 +370,195 @@ export const updateUomConversion = async (input: UpdateUomConversionInput) => {
 	}
 
 	return updatedConversion[0];
+};
+
+/**
+ * Create a new UOM with optional bulk conversions in a single transaction
+ * @param input UOM creation data with optional conversions array
+ * @returns Created UOM
+ */
+export const createUomWithConversions = async (
+	input: CreateUomWithConversionsInput,
+) => {
+	const { code, conversions, ...uomData } = input;
+
+	return db.transaction(async (tx) => {
+		// Create the UOM first
+		const newUom = await tx
+			.insert(uom)
+			.values({
+				code,
+				name: uomData.name,
+				system: uomData.system,
+				category: uomData.category,
+				isPackaging: uomData.isPackaging,
+			})
+			.returning();
+
+		if (!newUom[0]) {
+			throw new TRPCError({
+				code: "INTERNAL_SERVER_ERROR",
+				message: "Failed to create UOM",
+			});
+		}
+
+		// If conversions are provided, validate and create them
+		if (conversions && conversions.length > 0) {
+			// Validate that all target UOMs exist before creating any conversions
+			const targetUomCodes = conversions.map((c) => c.toUom);
+			const existingTargetUoms = await tx.query.uom.findMany({
+				where: inArray(uom.code, targetUomCodes),
+			});
+
+			const existingUomCodes = new Set(existingTargetUoms.map((u) => u.code));
+
+			// Filter out conversions with non-existing target UOMs
+			const validConversions = conversions.filter((conversion) =>
+				existingUomCodes.has(conversion.toUom),
+			);
+
+			// Create only valid conversions
+			if (validConversions.length > 0) {
+				const conversionValues = validConversions.map((conversion) => ({
+					fromUom: code,
+					toUom: conversion.toUom,
+					factor: conversion.factor,
+				}));
+
+				await tx.insert(uomConversion).values(conversionValues);
+			}
+		}
+
+		return newUom[0];
+	});
+};
+
+/**
+ * Validate if a UOM can be deactivated by checking dependencies
+ * @param code UOM code to validate
+ * @throws TRPCError if UOM cannot be deactivated
+ */
+export const validateUomCanBeDeactivated = async (code: string) => {
+	// Check if UOM is used as base UOM in active products
+	const productsWithBaseUom = await db
+		.select({ id: product.id })
+		.from(product)
+		.where(and(eq(product.baseUom, code), eq(product.isActive, true)))
+		.limit(1);
+
+	if (productsWithBaseUom.length > 0) {
+		throw new TRPCError({
+			code: "CONFLICT",
+			message: `Cannot deactivate UOM "${code}" - it is used as base UOM by active product(s)`,
+		});
+	}
+
+	// Check if UOM is used in active productUom records
+	const activeProductUoms = await db
+		.select({ id: productUom.id })
+		.from(productUom)
+		.innerJoin(product, eq(product.id, productUom.productId))
+		.where(and(eq(productUom.uomCode, code), eq(product.isActive, true)))
+		.limit(1);
+
+	if (activeProductUoms.length > 0) {
+		throw new TRPCError({
+			code: "CONFLICT",
+			message: `Cannot deactivate UOM "${code}" - it is used in active product UOM configuration(s)`,
+		});
+	}
+
+	// Additional checks could be added here:
+	// - Check active conversions where this UOM is fromUom
+	// - Check active inventory records
+	// - Check active orders, etc.
+};
+
+/**
+ * Soft delete (deactivate) a UOM
+ * @param input Deactivation request
+ * @returns Deactivated UOM
+ */
+export const deactivateUom = async (input: DeactivateUomInput) => {
+	const { code } = input;
+
+	// Check if UOM exists
+	const existingUom = await db.query.uom.findFirst({
+		where: eq(uom.code, code),
+	});
+
+	if (!existingUom) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: `UOM with code "${code}" not found`,
+		});
+	}
+
+	if (!existingUom.isActive) {
+		throw new TRPCError({
+			code: "CONFLICT",
+			message: `UOM "${code}" is already inactive`,
+		});
+	}
+
+	// Validate that it can be deactivated
+	await validateUomCanBeDeactivated(code);
+
+	// Deactivate the UOM
+	const deactivatedUom = await db
+		.update(uom)
+		.set({ isActive: false })
+		.where(eq(uom.code, code))
+		.returning();
+
+	if (!deactivatedUom[0]) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to deactivate UOM",
+		});
+	}
+
+	return deactivatedUom[0];
+};
+
+/**
+ * Reactivate a previously deactivated UOM
+ * @param code UOM code to activate
+ * @returns Activated UOM
+ */
+export const activateUom = async (code: string) => {
+	// Check if UOM exists
+	const existingUom = await db.query.uom.findFirst({
+		where: eq(uom.code, code),
+	});
+
+	if (!existingUom) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: `UOM with code "${code}" not found`,
+		});
+	}
+
+	if (existingUom.isActive) {
+		throw new TRPCError({
+			code: "CONFLICT",
+			message: `UOM "${code}" is already active`,
+		});
+	}
+
+	// Reactivate the UOM
+	const activatedUom = await db
+		.update(uom)
+		.set({ isActive: true })
+		.where(eq(uom.code, code))
+		.returning();
+
+	if (!activatedUom[0]) {
+		throw new TRPCError({
+			code: "INTERNAL_SERVER_ERROR",
+			message: "Failed to activate UOM",
+		});
+	}
+
+	return activatedUom[0];
 };

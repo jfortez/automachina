@@ -17,6 +17,7 @@ export const uom = pgTable(
 		system: text("system").notNull(), // UNECE o UCUM
 		category: text("category").notNull(), // count','mass','volume','length','area','time','other'
 		isPackaging: boolean("is_packaging").default(false).notNull(),
+		isActive: boolean("is_active").default(true).notNull(),
 		...timestamps,
 	},
 	(t) => [check("check_system", sql`${t.system} in ('UNECE','UCUM')`)],

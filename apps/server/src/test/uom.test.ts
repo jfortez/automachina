@@ -1,5 +1,4 @@
 import type { inferProcedureInput } from "@trpc/server";
-import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -251,6 +250,218 @@ describe("test UOM router and service", async () => {
 					await expect(
 						ctx.caller.uom.conversion.update(invalidUpdateInput),
 					).rejects.toThrow('Conversion from "PK" to "NONEXISTENT" not found');
+				});
+			});
+
+			describe("Soft Delete Operations", () => {
+				it("should create UOM with conversions using bulk creation", async () => {
+					const bulkUomCode = `BULK_${nanoid(5)}`;
+
+					const createInput: inferProcedureInput<
+						AppRouter["uom"]["createWithConversions"]
+					> = {
+						code: bulkUomCode,
+						name: "Bulk Created UOM",
+						system: "UNECE",
+						category: "mass",
+						isPackaging: false,
+						conversions: [
+							{
+								toUom: "EA",
+								factor: "5.0",
+							},
+							{
+								toUom: "PK",
+								factor: "2.0",
+							},
+						],
+					};
+
+					const createdUom =
+						await ctx.caller.uom.createWithConversions(createInput);
+					expect(createdUom).toBeDefined();
+					expect(createdUom.code).toBe(bulkUomCode);
+					expect(createdUom.name).toBe("Bulk Created UOM");
+					expect(createdUom.isActive).toBe(true);
+				});
+
+				it("should create UOM with conversions but skip invalid UOM references", async () => {
+					const bulkUomCode = `BULK_INVALID_${nanoid(5)}`;
+
+					const createInput: inferProcedureInput<
+						AppRouter["uom"]["createWithConversions"]
+					> = {
+						code: bulkUomCode,
+						name: "Bulk Created UOM with invalid conversions",
+						system: "UNECE",
+						category: "mass",
+						isPackaging: false,
+						conversions: [
+							{
+								toUom: "INVALID_UOM", // This UOM doesn't exist
+								factor: "5.0",
+							},
+							{
+								toUom: "EA", // This is valid
+								factor: "3.0",
+							},
+						],
+					};
+
+					// The UOM should be created but only valid conversions should be added
+					const createdUom =
+						await ctx.caller.uom.createWithConversions(createInput);
+					expect(createdUom).toBeDefined();
+					expect(createdUom.code).toBe(bulkUomCode);
+				});
+
+				it("should deactivate an unused UOM", async () => {
+					// Create a test UOM that won't be used anywhere
+					const deactivateCode = `DEACTIVATE_${nanoid(5)}`;
+					await ctx.caller.uom.create({
+						code: deactivateCode,
+						name: "Deactivatable UOM",
+						system: "UNECE",
+						category: "mass",
+						isPackaging: false,
+					});
+
+					// Deactivate it
+					const deactivatedUom = await ctx.caller.uom.deactivate({
+						code: deactivateCode,
+					});
+					expect(deactivatedUom).toBeDefined();
+					expect(deactivatedUom.code).toBe(deactivateCode);
+					expect(deactivatedUom.isActive).toBe(false);
+
+					// Verify it's not returned in regular queries
+					const regularListing = await ctx.caller.uom.getAll();
+					const inactiveUom = regularListing.find(
+						(u) => u.code === deactivateCode,
+					);
+					expect(inactiveUom).toBeUndefined();
+
+					// But is returned in admin queries
+					const adminListing = await ctx.caller.uom.getAllIncludingInactive();
+					const foundInactiveUom = adminListing.find(
+						(u) => u.code === deactivateCode,
+					);
+					expect(foundInactiveUom).toBeDefined();
+					expect(foundInactiveUom?.isActive).toBe(false);
+				});
+
+				it("should prevent deactivating UOM used as base UOM in active products", async () => {
+					// Try to deactivate "EA" which is likely used as base UOM
+					await expect(
+						ctx.caller.uom.deactivate({ code: "EA" }),
+					).rejects.toThrow(
+						/cannot deactivate.*used as base uom.*active product/i,
+					);
+				});
+
+				it("should prevent deactivating UOM used in active product configurations", async () => {
+					// Create a test product using a test UOM in productUom
+					const testUomForProduct = `PRODUCT_UOM_${nanoid(5)}`;
+					await ctx.caller.uom.create({
+						code: testUomForProduct,
+						name: "UOM for product config",
+						system: "UNECE",
+						category: "count",
+						isPackaging: false,
+					});
+
+					// Create product with this UOM
+					const productInput: inferProcedureInput<
+						AppRouter["product"]["create"]
+					> = {
+						sku: nanoid(10),
+						name: "Test Product Using UOM",
+						baseUom: "EA",
+						trackingLevel: "none",
+						isPhysical: true,
+						organizationId: ctx.defaultOrg.id,
+						categoryId: ctx.defaultCategoryId,
+						productUoms: [
+							{
+								uomCode: testUomForProduct,
+								qtyInBase: "8",
+							},
+						],
+					};
+
+					await ctx.caller.product.create(productInput);
+
+					// Now try to deactivate the UOM - should fail
+					await expect(
+						ctx.caller.uom.deactivate({ code: testUomForProduct }),
+					).rejects.toThrow(
+						/cannot deactivate.*used in.*active product.*configuration/i,
+					);
+				});
+
+				it("should activate a previously deactivated UOM", async () => {
+					// Create and deactivate a UOM
+					const activateCode = `ACTIVATE_${nanoid(5)}`;
+					await ctx.caller.uom.create({
+						code: activateCode,
+						name: "UOM to activate",
+						system: "UNECE",
+						category: "mass",
+						isPackaging: false,
+					});
+
+					await ctx.caller.uom.deactivate({ code: activateCode });
+
+					// Verify it's deactivated
+					const inactiveUom =
+						await ctx.caller.uom.getByCodeIncludingInactive(activateCode);
+					expect(inactiveUom?.isActive).toBe(false);
+
+					// Activate it
+					const activatedUom = await ctx.caller.uom.activate(activateCode);
+					expect(activatedUom).toBeDefined();
+					expect(activatedUom.code).toBe(activateCode);
+					expect(activatedUom.isActive).toBe(true);
+
+					// Verify it appears in regular queries now
+					const regularUom = await ctx.caller.uom.getByCode(activateCode);
+					expect(regularUom).toBeDefined();
+					expect(regularUom?.isActive).toBe(true);
+				});
+
+				it("should throw error when activating already active UOM", async () => {
+					await expect(ctx.caller.uom.activate("EA")).rejects.toThrow(
+						"already active",
+					);
+				});
+
+				it("should throw error when deactivating already inactive UOM", async () => {
+					// Create and deactivate a UOM
+					const alreadyInactiveCode = `INA_${nanoid(3)}`;
+					await ctx.caller.uom.create({
+						code: alreadyInactiveCode,
+						name: "Already inactive UOM",
+						system: "UNECE",
+						category: "mass",
+						isPackaging: false,
+					});
+
+					await ctx.caller.uom.deactivate({ code: alreadyInactiveCode });
+
+					// Try to deactivate again
+					await expect(
+						ctx.caller.uom.deactivate({ code: alreadyInactiveCode }),
+					).rejects.toThrow("already inactive");
+				});
+
+				it("should throw error when operating on non-existent UOM", async () => {
+					await expect(
+						ctx.caller.uom.deactivate({ code: "NONEXISTENT" }),
+					).rejects.toThrow("not found");
+
+					await expect(ctx.caller.uom.activate("NONEXISTENT")).rejects.toThrow(
+						"not found",
+					);
 				});
 			});
 		});
