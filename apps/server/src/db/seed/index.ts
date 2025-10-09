@@ -146,7 +146,7 @@ async function main() {
 		};
 
 		fs.writeFileSync(
-			path.join(__dirname, "..", "test", "globals.ts"),
+			path.join(__dirname, "..", "..", "test", "globals.ts"),
 			`export const globals = ${JSON.stringify(globals, null, 2)};`,
 		);
 	} catch (error) {

@@ -16,7 +16,7 @@
 		"db:watch": "docker compose up",
 		"db:stop": "docker compose stop",
 		"db:down": "docker compose down",
-		"db:seed": "bun run ./src/db/seed.ts",
+		"db:seed": "bun run ./src/db/seed",
 		"db:reset": "docker-compose down -v && docker-compose up -d && pnpm db:push && pnpm db:seed",
 		"test": "vitest"
 	},

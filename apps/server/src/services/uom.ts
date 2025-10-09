@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { product, productUom } from "@/db/schema/products";
 import { uom, uomConversion } from "@/db/schema/uom";
@@ -8,7 +8,6 @@ import type {
 	CreateUomInput,
 	CreateUomWithConversionsInput,
 	DeactivateUomInput,
-	GetUomOptionsInput,
 	UpdateUomConversionInput,
 	UpdateUomInput,
 } from "@/dto/uom";
@@ -561,4 +560,19 @@ export const activateUom = async (code: string) => {
 	}
 
 	return activatedUom[0];
+};
+
+export const getBaseUom = async (
+	tx: Transaction,
+	productId: string,
+): Promise<string> => {
+	const [product] = await tx
+		.select({ baseUom: sql`base_uom` })
+		.from(sql`(SELECT base_uom FROM product WHERE id = ${productId}) as p`);
+
+	if (!product?.baseUom) {
+		throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+	}
+
+	return product.baseUom as string;
 };

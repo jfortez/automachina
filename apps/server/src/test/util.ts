@@ -8,6 +8,8 @@ export interface TestContext {
 	caller: ReturnType<typeof createCaller>;
 	defaultCategoryId: string;
 	defaultOrg: typeof organizations.$inferSelect;
+	defaultWarehouseId: string;
+	defaultCustomerId: string;
 }
 
 export async function setupTestContext(): Promise<TestContext> {
@@ -22,5 +24,7 @@ export async function setupTestContext(): Promise<TestContext> {
 		caller,
 		defaultOrg: globals.organization as unknown as TestContext["defaultOrg"],
 		defaultCategoryId: globals.id,
+		defaultWarehouseId: globals.warehouse.id,
+		defaultCustomerId: "test-customer-id-" + Date.now(), // TODO: Create actual customer in tests
 	};
 }

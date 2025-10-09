@@ -135,15 +135,16 @@ describe("Testing Product Route", () => {
 
 		expect(createdProduct).toBeTruthy();
 		expect(pu).toBeTruthy();
+		expect(pu).toHaveLength(2);
 		expect(pu).toMatchObject([
-			{
-				uomCode: "PK",
-				qtyInBase: "6.".padEnd(11, "0"),
-			},
 			{
 				uomCode: "EA",
 				qtyInBase: "1.".padEnd(11, "0"),
 				isBase: true,
+			},
+			{
+				uomCode: "PK",
+				qtyInBase: "6.".padEnd(11, "0"),
 			},
 		]);
 	});
