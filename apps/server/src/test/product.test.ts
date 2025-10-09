@@ -207,13 +207,89 @@ describe("Testing Product Route", () => {
 		expect(pu).toHaveLength(0);
 	});
 
-	// it("get product stock", async () => {
-	//   const stock = await ctx.caller.product.getStock({
-	//     organizationId: ctx.defaultOrg.id,
-	//     productId: ,
-	//     warehouseId: "d5f9b48d-d107-4a9b-a25a-61698f2a0fb4",
-	//   });
+	it.sequential("get product stock with breakdown", async () => {
+		// First create a product with packaging UoM
+		const productInput: inferProcedureInput<AppRouter["product"]["create"]> = {
+			organizationId: ctx.defaultOrg.id,
+			sku: nanoid(10),
+			name: "Product with Packaging Breakdown",
+			baseUom: "EA",
+			trackingLevel: "none",
+			isPhysical: true,
+			categoryId: ctx.defaultCategoryId,
+			productUoms: [
+				{
+					uomCode: "PK",
+					qtyInBase: "6", // 1 PK = 6 EA
+				},
+			],
+		};
 
-	//   expect(stock).toBeTruthy();
-	// });
+		const createdProduct = await ctx.caller.product.create(productInput);
+
+		// Add 25 EA stock (4 PK complete + 1 EA remaining = 25 EA)
+		const receiveInput: inferProcedureInput<AppRouter["inventory"]["receive"]> =
+			{
+				organizationId: ctx.defaultOrg.id,
+				productId: createdProduct.id,
+				qty: 4,
+				uomCode: "PK", // Receive 4 PK = 24 EA
+				currency: "USD",
+			};
+		await ctx.caller.inventory.receive(receiveInput);
+
+		const receiveInput2: inferProcedureInput<
+			AppRouter["inventory"]["receive"]
+		> = {
+			organizationId: ctx.defaultOrg.id,
+			productId: createdProduct.id,
+			qty: 1,
+			uomCode: "EA", // Receive additional 1 EA
+			currency: "USD",
+		};
+		await ctx.caller.inventory.receive(receiveInput2);
+
+		const stockWithBreakdown = await ctx.caller.product.getStock({
+			organizationId: ctx.defaultOrg.id,
+			productId: createdProduct.id,
+			uomCode: "PK", // Request in packaging UoM
+		});
+
+		expect(stockWithBreakdown).toMatchObject({
+			productId: createdProduct.id,
+			totalQty: 4, // Math.floor(25 / 6) = 4 complete PK
+			uomCode: "PK",
+			breakdown: [
+				{ uomCode: "PK", qty: 4 }, // 4 complete packages
+				{ uomCode: "EA", qty: 1 }, // 1 remaining unit
+			],
+		});
+
+		// Test getting stock in base UoM (no breakdown)
+		const stockBaseUom = await ctx.caller.product.getStock({
+			organizationId: ctx.defaultOrg.id,
+			productId: createdProduct.id,
+			uomCode: "EA", // Request in base UoM
+		});
+
+		expect(stockBaseUom).toMatchObject({
+			productId: createdProduct.id,
+			totalQty: 25,
+			uomCode: "EA",
+			breakdown: undefined, // No breakdown when requesting base UoM
+		});
+
+		// Test getting stock with no specific UoM (default behavior)
+		const stockDefault = await ctx.caller.product.getStock({
+			organizationId: ctx.defaultOrg.id,
+			productId: createdProduct.id,
+		});
+
+		expect(stockDefault).toMatchObject({
+			productId: createdProduct.id,
+			totalQty: 25,
+			uomCode: "EA",
+			breakdown: undefined, // No breakdown when no UoM specified
+		});
+	});
 });

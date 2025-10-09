@@ -1,4 +1,8 @@
-import { receiveInventorySchema, sellProductSchema } from "@/dto/inventory";
+import {
+	adjustInventorySchema,
+	receiveInventorySchema,
+	sellProductSchema,
+} from "@/dto/inventory";
 import { protectedProcedure, router } from "@/lib/trpc";
 import * as inventoryServices from "@/services/inventory";
 
@@ -12,5 +16,10 @@ export const inventoryRouter = router({
 		.input(sellProductSchema)
 		.mutation(async ({ input }) => {
 			return inventoryServices.sellProduct(input);
+		}),
+	adjust: protectedProcedure
+		.input(adjustInventorySchema)
+		.mutation(async ({ input }) => {
+			return inventoryServices.adjustInventory(input);
 		}),
 });

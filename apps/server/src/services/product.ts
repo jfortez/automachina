@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
-import type { PgTransaction } from "drizzle-orm/pg-core";
+
 import { db } from "@/db";
 import { inventoryLedger } from "@/db/schema/inventory";
 import {
@@ -19,6 +19,7 @@ import type {
 	GetProductStockInput,
 	UpdateProductCategoryInput,
 } from "@/dto/product";
+import type { Transaction } from "@/types";
 
 const getAllProducts = async () => {
 	const allProducts = await db.query.product.findMany({
@@ -267,8 +268,6 @@ type GetStockArgs = {
 	warehouseId?: string;
 };
 
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
 export const _getStock = async (
 	{ organizationId, productId, warehouseId }: GetStockArgs,
 	tx: Transaction | undefined = undefined,
@@ -303,7 +302,6 @@ export const _getStock = async (
 
 export const getProductStock = async (d: GetProductStockInput) => {
 	return await db.transaction(async (tx) => {
-		// Validate product exists and is physical
 		const [product] = await tx
 			.select({
 				id: productTable.id,
@@ -336,10 +334,8 @@ export const getProductStock = async (d: GetProductStockInput) => {
 
 		const totalQtyInBase = Number(stock?.totalQty || 0);
 
-		// If uomCode specified, convert to requested UoM
 		let result = { totalQty: totalQtyInBase, uomCode: product.baseUom };
 		if (d.uomCode && d.uomCode !== product.baseUom) {
-			// Validate uomCode
 			const [uomRecord] = await tx
 				.select()
 				.from(uom)
@@ -352,7 +348,6 @@ export const getProductStock = async (d: GetProductStockInput) => {
 				});
 			}
 
-			// Try productUom first
 			const [productUomRecord] = await tx
 				.select({ qtyInBase: productUom.qtyInBase })
 				.from(productUom)
@@ -363,7 +358,9 @@ export const getProductStock = async (d: GetProductStockInput) => {
 
 			if (productUomRecord) {
 				result = {
-					totalQty: totalQtyInBase / Number(productUomRecord.qtyInBase),
+					totalQty: Math.floor(
+						totalQtyInBase / Number(productUomRecord.qtyInBase),
+					),
 					uomCode: d.uomCode,
 				};
 			} else {
@@ -382,7 +379,7 @@ export const getProductStock = async (d: GetProductStockInput) => {
 					});
 				}
 				result = {
-					totalQty: totalQtyInBase / Number(conversion.factor),
+					totalQty: Math.floor(totalQtyInBase / Number(conversion.factor)),
 					uomCode: d.uomCode,
 				};
 			}
@@ -418,7 +415,7 @@ export const getProductStock = async (d: GetProductStockInput) => {
 			productId: d.productId,
 			totalQty: result.totalQty,
 			uomCode: result.uomCode,
-			breakdown, // Optional: e.g., [{uomCode:"PK", qty:3}, {uomCode:"EA", qty:4}]
+			breakdown,
 		};
 	});
 };

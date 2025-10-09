@@ -11,13 +11,6 @@ export interface TestContext {
 }
 
 export async function setupTestContext(): Promise<TestContext> {
-	// Autenticación
-	// const session = await auth.api.signInEmail({
-	//   body: { email: "rylan_reichel@yahoo.com", password: "password" },
-	//   returnHeaders: true,
-	// });
-
-	// Crear caller
 	const caller = createCaller({
 		session: {
 			user: {} as User,

@@ -5,8 +5,66 @@ import { handlingUnits } from "@/db/schema/handlingUnits";
 import { inventoryLedger } from "@/db/schema/inventory";
 import { product as productTable, productUom } from "@/db/schema/products";
 import { uom, uomConversion } from "@/db/schema/uom";
-import type { ReceiveInventoryInput, SellProductInput } from "@/dto/inventory";
+import type {
+	AdjustInventoryInput,
+	ReceiveInventoryInput,
+	SellProductInput,
+} from "@/dto/inventory";
+import type { Transaction } from "@/types";
 import { _getStock } from "./product";
+
+/**
+ * Converts quantity from given UoM to product's base UoM
+ * @param tx Database transaction
+ * @param productId Product ID to get conversions for
+ * @param qty Quantity in the given UoM
+ * @param uomCode UoM code to convert from
+ * @param productBaseUom Base UoM of the product (used for validation)
+ * @returns Quantity converted to base UoM
+ */
+const _convertUomToBase = async (
+	tx: Transaction,
+	productId: string,
+	qty: number,
+	uomCode: string,
+	productBaseUom: string,
+): Promise<number> => {
+	// If already in base UoM, return as-is
+	if (uomCode === productBaseUom) {
+		return qty;
+	}
+
+	// Prioritize productUom (product-specific conversions)
+	const [productUomRecord] = await tx
+		.select({ qtyInBase: productUom.qtyInBase })
+		.from(productUom)
+		.where(
+			sql`${productUom.productId} = ${productId} AND ${productUom.uomCode} = ${uomCode}`,
+		)
+		.limit(1);
+
+	if (productUomRecord) {
+		return qty * Number(productUomRecord.qtyInBase);
+	}
+
+	// Fallback to uomConversion (global standard conversions)
+	const [conversion] = await tx
+		.select({ factor: uomConversion.factor })
+		.from(uomConversion)
+		.where(
+			sql`${uomConversion.fromUom} = ${uomCode} AND ${uomConversion.toUom} = ${productBaseUom}`,
+		)
+		.limit(1);
+
+	if (!conversion) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `No conversion from ${uomCode} to ${productBaseUom}`,
+		});
+	}
+
+	return qty * Number(conversion.factor);
+};
 
 export const receiveInventory = async (d: ReceiveInventoryInput) => {
 	return await db.transaction(async (tx) => {
@@ -25,38 +83,14 @@ export const receiveInventory = async (d: ReceiveInventoryInput) => {
 			});
 		}
 
-		// Convert qty to baseUom
-		let qtyInBase = d.qty;
-		if (d.uomCode !== prod.baseUom) {
-			// Prioritize productUom
-			const [productUomRecord] = await tx
-				.select({ qtyInBase: productUom.qtyInBase })
-				.from(productUom)
-				.where(
-					sql`${productUom.productId} = ${d.productId} AND ${productUom.uomCode} = ${d.uomCode}`,
-				)
-				.limit(1);
-
-			if (productUomRecord) {
-				qtyInBase = d.qty * Number(productUomRecord.qtyInBase);
-			} else {
-				// Fallback to uomConversion
-				const [conversion] = await tx
-					.select({ factor: uomConversion.factor })
-					.from(uomConversion)
-					.where(
-						sql`${uomConversion.fromUom} = ${d.uomCode} AND ${uomConversion.toUom} = ${prod.baseUom}`,
-					)
-					.limit(1);
-				if (!conversion) {
-					throw new TRPCError({
-						code: "BAD_REQUEST",
-						message: `No conversion from ${d.uomCode} to ${prod.baseUom}`,
-					});
-				}
-				qtyInBase = d.qty * Number(conversion.factor);
-			}
-		}
+		// Convert qty to baseUom using helper function
+		const qtyInBase = await _convertUomToBase(
+			tx,
+			d.productId,
+			d.qty,
+			d.uomCode,
+			prod.baseUom,
+		);
 
 		// Insert receipt in inventory_ledger
 		await tx.insert(inventoryLedger).values({
@@ -94,43 +128,20 @@ export const sellProduct = async (
 			});
 		}
 
-		// Calculate total qtyInBase to sell and store conversions
+		// Calculate total qtyInBase to sell using helper function
 		let totalQtyToSellInBase = 0;
 		const lineConversions: { [key: string]: number } = {};
 		for (const line of d.lines) {
-			let lineQtyInBase = line.qty;
-			if (line.uomCode !== prod.baseUom) {
-				const [productUomRecord] = await tx
-					.select({ qtyInBase: productUom.qtyInBase })
-					.from(productUom)
-					.where(
-						sql`${productUom.productId} = ${d.productId} AND ${productUom.uomCode} = ${line.uomCode}`,
-					)
-					.limit(1);
+			const lineQtyInBase = await _convertUomToBase(
+				tx,
+				d.productId,
+				line.qty,
+				line.uomCode,
+				prod.baseUom,
+			);
 
-				if (productUomRecord) {
-					lineQtyInBase = line.qty * Number(productUomRecord.qtyInBase);
-					lineConversions[line.uomCode] = Number(productUomRecord.qtyInBase);
-				} else {
-					const [conversion] = await tx
-						.select({ factor: uomConversion.factor })
-						.from(uomConversion)
-						.where(
-							sql`${uomConversion.fromUom} = ${line.uomCode} AND ${uomConversion.toUom} = ${prod.baseUom}`,
-						)
-						.limit(1);
-					if (!conversion) {
-						throw new TRPCError({
-							code: "BAD_REQUEST",
-							message: `No conversion from ${line.uomCode} to ${prod.baseUom}`,
-						});
-					}
-					lineQtyInBase = line.qty * Number(conversion.factor);
-					lineConversions[line.uomCode] = Number(conversion.factor);
-				}
-			} else {
-				lineConversions[line.uomCode] = 1;
-			}
+			// Store conversion factor for later use in ledger insertion
+			lineConversions[line.uomCode] = lineQtyInBase / line.qty;
 			totalQtyToSellInBase += lineQtyInBase;
 		}
 
@@ -241,5 +252,84 @@ export const sellProduct = async (
 		}
 
 		return result;
+	});
+};
+
+export const adjustInventory = async (d: AdjustInventoryInput) => {
+	return await db.transaction(async (tx) => {
+		// Get product details
+		const [prod] = await tx
+			.select()
+			.from(productTable)
+			.where(eq(productTable.id, d.productId));
+		if (!prod) {
+			throw new TRPCError({ code: "NOT_FOUND", message: "Product not found" });
+		}
+		if (!prod.isPhysical) {
+			throw new TRPCError({
+				code: "BAD_REQUEST",
+				message: "Cannot adjust inventory for non-physical products",
+			});
+		}
+
+		// Convert qty to baseUom using helper function
+		const qtyInBase = await _convertUomToBase(
+			tx,
+			d.productId,
+			d.qty,
+			d.uomCode,
+			prod.baseUom,
+		);
+
+		// For negative adjustments, validate sufficient stock
+		if (d.adjustmentType === "neg") {
+			const currentStock = await _getStock(
+				{
+					organizationId: d.organizationId,
+					productId: d.productId,
+					warehouseId: d.warehouseId,
+				},
+				tx,
+			);
+			const currentStockInBase = Number(currentStock?.totalQty || 0);
+
+			if (currentStockInBase < qtyInBase) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: `Cannot adjust negative: insufficient stock (${currentStockInBase}) for adjustment (${qtyInBase})`,
+				});
+			}
+		}
+
+		// Insert adjustment in inventory_ledger
+		const movementType =
+			d.adjustmentType === "pos" ? "adjustment_pos" : "adjustment_neg";
+
+		// Combine notes, reason, and physicalCountId into the note field
+		const auditTrail = [
+			d.notes,
+			d.reason && `Reason: ${d.reason}`,
+			d.physicalCountId && `Physical Count ID: ${d.physicalCountId}`,
+		]
+			.filter(Boolean)
+			.join(" | ");
+
+		await tx.insert(inventoryLedger).values({
+			organizationId: d.organizationId,
+			occurredAt: new Date(),
+			movementType,
+			productId: d.productId,
+			warehouseId: d.warehouseId,
+			qtyInBase: qtyInBase.toString(),
+			uomCode: d.uomCode,
+			qtyInUom: d.qty.toString(),
+			note: auditTrail || null,
+		});
+
+		return {
+			success: true,
+			productId: d.productId,
+			qtyAdjustedInBase: qtyInBase,
+		};
 	});
 };

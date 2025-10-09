@@ -29,3 +29,18 @@ export const sellProductSchema = z.object({
 });
 
 export type SellProductInput = z.infer<typeof sellProductSchema>;
+
+// DTO for adjustInventory
+export const adjustInventorySchema = z.object({
+	organizationId: z.string(),
+	warehouseId: z.string(),
+	productId: z.string(),
+	adjustmentType: z.enum(["pos", "neg"]), // + positive adjustment, - negative adjustment
+	qty: z.number().positive(),
+	uomCode: z.string().min(1),
+	reason: z.string().min(1), // e.g., "physical_count", "damage", "theft", etc.
+	notes: z.string().optional(),
+	physicalCountId: z.string().optional(), // reference to external physical count document
+});
+
+export type AdjustInventoryInput = z.infer<typeof adjustInventorySchema>;
