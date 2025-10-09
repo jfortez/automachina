@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { handlingUnits } from "@/db/schema/handlingUnits";
 import { inventoryLedger } from "@/db/schema/inventory";
 import { product as productTable, productUom } from "@/db/schema/products";
-import { uom, uomConversion } from "@/db/schema/uom";
+import { uom } from "@/db/schema/uom";
 import type {
 	AdjustInventoryInput,
 	ReceiveInventoryInput,

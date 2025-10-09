@@ -6,7 +6,6 @@ import {
 	index,
 	jsonb,
 	numeric,
-	pgEnum,
 	pgTable,
 	text,
 	timestamp,
