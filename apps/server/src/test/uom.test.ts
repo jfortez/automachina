@@ -1,4 +1,5 @@
 import type { inferProcedureInput } from "@trpc/server";
+import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -43,6 +44,215 @@ describe("test UOM router and service", async () => {
 		it("should return null for non-existent UOM code", async () => {
 			const uom = await ctx.caller.uom.getByCode("NONEXISTENT");
 			expect(uom).toBeUndefined();
+		});
+
+		describe("CRUD Operations", () => {
+			describe("UOM Create/Update", () => {
+				it("should create a new UOM", async () => {
+					const testCode = `TEST_${nanoid(5)}`;
+					const newUomInput: inferProcedureInput<AppRouter["uom"]["create"]> = {
+						code: testCode,
+						name: "Test Unit",
+						system: "UNECE",
+						category: "mass",
+						isPackaging: false,
+					};
+
+					const createdUom = await ctx.caller.uom.create(newUomInput);
+					expect(createdUom).toBeDefined();
+					expect(createdUom.code).toBe(testCode);
+					expect(createdUom.name).toBe("Test Unit");
+					expect(createdUom.system).toBe("UNECE");
+					expect(createdUom.category).toBe("mass");
+					expect(createdUom.isPackaging).toBe(false);
+
+					// Verify it can be retrieved
+					const retrievedUom = await ctx.caller.uom.getByCode(testCode);
+					expect(retrievedUom).toBeDefined();
+					expect(retrievedUom?.code).toBe(testCode);
+				});
+
+				it("should throw error when creating UOM with duplicate code", async () => {
+					const duplicateUomInput: inferProcedureInput<
+						AppRouter["uom"]["create"]
+					> = {
+						code: "EA", // Already exists
+						name: "Duplicate Each",
+						system: "UNECE",
+						category: "count",
+						isPackaging: false,
+					};
+
+					await expect(
+						ctx.caller.uom.create(duplicateUomInput),
+					).rejects.toThrow('UOM with code "EA" already exists');
+				});
+
+				it("should update an existing UOM", async () => {
+					// First create a test UOM
+					const updateTestCode = `UPDATE_${nanoid(5)}`;
+					const createInput: inferProcedureInput<AppRouter["uom"]["create"]> = {
+						code: updateTestCode,
+						name: "Original Name",
+						system: "UNECE",
+						category: "mass",
+						isPackaging: false,
+					};
+
+					await ctx.caller.uom.create(createInput);
+
+					// Now update it
+					const updateInput: inferProcedureInput<AppRouter["uom"]["update"]> = {
+						code: updateTestCode,
+						name: "Updated Name",
+						category: "volume",
+						isPackaging: true,
+					};
+
+					const updatedUom = await ctx.caller.uom.update(updateInput);
+					expect(updatedUom).toBeDefined();
+					expect(updatedUom.code).toBe(updateTestCode);
+					expect(updatedUom.name).toBe("Updated Name");
+					expect(updatedUom.category).toBe("volume");
+					expect(updatedUom.isPackaging).toBe(true);
+					expect(updatedUom.system).toBe("UNECE"); // Should remain unchanged
+				});
+
+				it("should throw error when updating non-existent UOM", async () => {
+					const updateInput: inferProcedureInput<AppRouter["uom"]["update"]> = {
+						code: "NONEXISTENT",
+						name: "Should Fail",
+					};
+
+					await expect(ctx.caller.uom.update(updateInput)).rejects.toThrow(
+						'UOM with code "NONEXISTENT" not found',
+					);
+				});
+			});
+
+			describe("UOM Conversion Create/Update", () => {
+				it("should create a new UOM conversion", async () => {
+					// First create two test UOMs
+					const testFromCode = `CONV_FROM_${nanoid(5)}`;
+					const testToCode = `CONV_TO_${nanoid(5)}`;
+					await ctx.caller.uom.create({
+						code: testFromCode,
+						name: "Test From Unit",
+						system: "UNECE",
+						category: "count",
+						isPackaging: false,
+					});
+
+					await ctx.caller.uom.create({
+						code: testToCode,
+						name: "Test To Unit",
+						system: "UNECE",
+						category: "count",
+						isPackaging: false,
+					});
+
+					// Create conversion
+					const conversionInput: inferProcedureInput<
+						AppRouter["uom"]["conversion"]["create"]
+					> = {
+						fromUom: testFromCode,
+						toUom: testToCode,
+						factor: "2.5",
+					};
+
+					const createdConversion =
+						await ctx.caller.uom.conversion.create(conversionInput);
+					expect(createdConversion).toBeDefined();
+					expect(createdConversion.fromUom).toBe(testFromCode);
+					expect(createdConversion.toUom).toBe(testToCode);
+					expect(createdConversion.factor).toBe("2.500000000000");
+				});
+
+				it("should throw error when creating conversion with non-existent UOMs", async () => {
+					const invalidConversionInput: inferProcedureInput<
+						AppRouter["uom"]["conversion"]["create"]
+					> = {
+						fromUom: "NONEXISTENT",
+						toUom: "EA",
+						factor: "1.0",
+					};
+
+					await expect(
+						ctx.caller.uom.conversion.create(invalidConversionInput),
+					).rejects.toThrow('Source UOM "NONEXISTENT" not found');
+				});
+
+				it("should throw error when creating duplicate conversion", async () => {
+					const duplicateConversionInput: inferProcedureInput<
+						AppRouter["uom"]["conversion"]["create"]
+					> = {
+						fromUom: "PK",
+						toUom: "EA", // Already exists globally
+						factor: "5.0",
+					};
+
+					await expect(
+						ctx.caller.uom.conversion.create(duplicateConversionInput),
+					).rejects.toThrow('Conversion from "PK" to "EA" already exists');
+				});
+
+				it("should update an existing UOM conversion", async () => {
+					// First create test UOMs and conversion
+					const updateFromCode = `UP_FROM_${nanoid(5)}`;
+					const updateToCode = `UP_TO_${nanoid(5)}`;
+					await ctx.caller.uom.create({
+						code: updateFromCode,
+						name: "Update From Unit",
+						system: "UNECE",
+						category: "count",
+						isPackaging: false,
+					});
+
+					await ctx.caller.uom.create({
+						code: updateToCode,
+						name: "Update To Unit",
+						system: "UNECE",
+						category: "count",
+						isPackaging: false,
+					});
+
+					await ctx.caller.uom.conversion.create({
+						fromUom: updateFromCode,
+						toUom: updateToCode,
+						factor: "1.0",
+					});
+
+					// Now update the conversion
+					const updateInput: inferProcedureInput<
+						AppRouter["uom"]["conversion"]["update"]
+					> = {
+						fromUom: updateFromCode,
+						toUom: updateToCode,
+						factor: "3.5",
+					};
+
+					const updatedConversion =
+						await ctx.caller.uom.conversion.update(updateInput);
+					expect(updatedConversion).toBeDefined();
+					expect(updatedConversion.fromUom).toBe(updateFromCode);
+					expect(updatedConversion.toUom).toBe(updateToCode);
+					expect(updatedConversion.factor).toBe("3.500000000000");
+				});
+
+				it("should throw error when updating non-existent conversion", async () => {
+					const invalidUpdateInput: inferProcedureInput<
+						AppRouter["uom"]["conversion"]["update"]
+					> = {
+						fromUom: "PK",
+						toUom: "NONEXISTENT",
+						factor: "2.0",
+					};
+
+					await expect(
+						ctx.caller.uom.conversion.update(invalidUpdateInput),
+					).rejects.toThrow('Conversion from "PK" to "NONEXISTENT" not found');
+				});
+			});
 		});
 	});
 
