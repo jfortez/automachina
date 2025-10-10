@@ -1,6 +1,7 @@
-import type { Session, User } from "better-auth";
+import type { Session } from "better-auth";
 import type { organizations } from "@/db/schema/organizations";
-
+import { DEFAULT_USERS } from "@/db/seed/data";
+import { auth } from "@/lib/auth";
 import { createCaller } from "@/routers";
 import { globals } from "./globals";
 
@@ -13,9 +14,15 @@ export interface TestContext {
 }
 
 export async function setupTestContext(): Promise<TestContext> {
+	const { user } = await auth.api.signInEmail({
+		body: {
+			email: DEFAULT_USERS[0].email,
+			password: DEFAULT_USERS[0].password,
+		},
+	});
 	const caller = createCaller({
 		session: {
-			user: {} as User,
+			user,
 			session: {} as Session,
 		},
 	});

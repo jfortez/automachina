@@ -7,6 +7,9 @@ const envVariables = z.object({
 	BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
 	GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
 	OPEN_AI_API_KEY: z.string().optional(),
+	S3_ENDPOINT: z.string(),
+	S3_ACCESS_KEY: z.string(),
+	S3_SECRET_KEY: z.string(),
 });
 
 export const env = envVariables.parse(process.env);

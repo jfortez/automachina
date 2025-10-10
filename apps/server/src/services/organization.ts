@@ -6,8 +6,11 @@ import type {
 	CreateOrgInput,
 	UpdateOrgInput,
 } from "@/dto/organization";
+import { createBucket } from "@/lib/s3";
 import { db } from "../db";
 import { organizations as org, orgMembers } from "../db/schema/organizations";
+import { priceList, productCategory } from "../db/schema/products";
+import { locations, warehouses } from "../db/schema/warehouse";
 
 const validateIsMember = async (userId: string, orgId: string) => {
 	// Check if the user is a member of the organization
@@ -46,14 +49,54 @@ const getOrganizationsByUser = async (userId: string) => {
 };
 
 const createOrganization = async (data: CreateOrgInput, user: User) => {
-	const newOrg = await db.insert(org).values(data).returning();
+	return await db.transaction(async (tx) => {
+		const newOrg = await tx.insert(org).values(data).returning();
 
-	await db.insert(orgMembers).values({
-		organizationId: newOrg[0].id,
-		userId: user.id,
+		const orgId = newOrg[0].id;
+		await createBucket(`org-${orgId}`);
+
+		await tx.insert(orgMembers).values({
+			organizationId: orgId,
+			userId: user.id,
+		});
+
+		// Create default warehouse
+		const [warehouse] = await tx
+			.insert(warehouses)
+			.values({
+				organizationId: orgId,
+				code: "default",
+				name: "Default Warehouse",
+				address: {},
+			})
+			.returning();
+
+		// Create default warehouse location
+		await tx.insert(locations).values({
+			warehouseId: warehouse.id,
+			code: "storage",
+			type: "storage",
+		});
+
+		// Create default public price list
+		await tx.insert(priceList).values({
+			organizationId: orgId,
+			code: "default",
+			name: "Default Price List",
+			type: "public",
+			currency: "USD",
+		});
+
+		// Create default product category
+		await tx.insert(productCategory).values({
+			organizationId: orgId,
+			code: "general",
+			name: "General",
+			description: "Default general category",
+		});
+
+		return newOrg;
 	});
-
-	return newOrg;
 };
 
 const updateOrganization = async (

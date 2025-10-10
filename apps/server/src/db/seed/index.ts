@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { faker as f } from "@faker-js/faker";
 import { drizzle } from "drizzle-orm/node-postgres";
 import ora from "ora";
 import { v4 as uuid } from "uuid";
@@ -10,7 +9,7 @@ import * as orgSchema from "../schema/organizations";
 import * as productSchema from "../schema/products";
 import * as uomSchema from "../schema/uom";
 import * as warehouseSchema from "../schema/warehouse";
-import { UOM_CONVERSIONS, UOM_ITEMS } from "./data";
+import { DEFAULT_USERS, UOM_CONVERSIONS, UOM_ITEMS } from "./data";
 
 async function main() {
 	const UNIQUE_ID = uuid();
@@ -30,19 +29,6 @@ async function main() {
 		spinner.succeed("UOM Conversions seeded");
 
 		spinner.text = "Seeding Users";
-		const DEFAULT_USERS = [
-			{
-				email: f.internet.email(),
-				password: "password",
-				name: f.person.fullName(),
-			},
-			{
-				email: f.internet.email(),
-				password: "password",
-				name: f.person.fullName(),
-			},
-		];
-
 		/* ==== PUBLIC SEED === */
 		// THIS IS FOR TEST SUITES
 

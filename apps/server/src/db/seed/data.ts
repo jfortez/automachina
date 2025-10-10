@@ -1,4 +1,18 @@
+import { faker as f } from "@faker-js/faker";
 import type * as uomSchema from "@/db/schema/uom";
+
+export const DEFAULT_USERS = [
+	{
+		email: "test@testmail.com",
+		password: "password",
+		name: f.person.fullName(),
+	},
+	{
+		email: "foo@foomail.com",
+		password: "password",
+		name: f.person.fullName(),
+	},
+];
 
 export const UOM_ITEMS: (typeof uomSchema.uom.$inferInsert)[] = [
 	{
