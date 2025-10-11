@@ -213,7 +213,10 @@ describe("Testing Supplier Management System", () => {
 				await ctx.caller.supplier.products.getBySupplier(supplierId);
 			const updatedProduct = updatedProducts.find(
 				(sp) => sp.id === productToUpdate.id,
-			)!;
+			);
+			if (!updatedProduct) {
+				throw new Error("Product not found");
+			}
 
 			expect(updatedProduct.supplierSku).toBe("UPDATED_SUPPLIER_SKU");
 			expect(updatedProduct.defaultUom).toBe("CS");
@@ -227,7 +230,10 @@ describe("Testing Supplier Management System", () => {
 				await ctx.caller.supplier.products.getBySupplier(supplierId);
 			const productToDelete = supplierProducts.find(
 				(sp) => sp.supplierSku === "UPDATED_SUPPLIER_SKU",
-			)!;
+			);
+			if (!productToDelete) {
+				throw new Error("Product not found");
+			}
 
 			expect(productToDelete).toBeDefined();
 

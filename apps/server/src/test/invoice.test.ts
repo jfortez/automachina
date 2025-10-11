@@ -1,5 +1,4 @@
 import type { inferProcedureInput } from "@trpc/server";
-import { nanoid } from "nanoid";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { AppRouter } from "@/routers";
 import { globals } from "./globals";

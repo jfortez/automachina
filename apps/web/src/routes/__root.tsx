@@ -3,12 +3,9 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
 	createRootRouteWithContext,
 	HeadContent,
-	Outlet,
-	useRouterState,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import Header from "@/components/header";
-import Loader from "@/components/loader";
+import AppLayout from "@/components/layout/app-layout";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import type { trpc } from "@/utils/trpc";
@@ -28,7 +25,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 			},
 			{
 				name: "description",
-				content: "automachina is a web application",
+				content: "a ERP automation tool",
 			},
 		],
 		links: [
@@ -41,10 +38,6 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 });
 
 function RootComponent() {
-	const isFetching = useRouterState({
-		select: (s) => s.isLoading,
-	});
-
 	return (
 		<>
 			<HeadContent />
@@ -54,11 +47,8 @@ function RootComponent() {
 				disableTransitionOnChange
 				storageKey="vite-ui-theme"
 			>
-				<div className="grid h-svh grid-rows-[auto_1fr]">
-					<Header />
-					{isFetching ? <Loader /> : <Outlet />}
-				</div>
-				<Toaster richColors />
+				<AppLayout />
+				<Toaster richColors closeButton />
 			</ThemeProvider>
 			<TanStackRouterDevtools position="bottom-left" />
 			<ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />

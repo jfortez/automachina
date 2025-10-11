@@ -36,7 +36,8 @@
 		"rules": {
 			"recommended": true,
 			"correctness": {
-				"useExhaustiveDependencies": "info"
+				"useExhaustiveDependencies": "info",
+				"noChildrenProp": "off"
 			},
 			"nursery": {
 				"useSortedClasses": {
@@ -51,7 +52,10 @@
 				"noUnknownAtRules": "off"
 			},
 			"a11y": {
-				"noSvgWithoutTitle": "off"
+				"noSvgWithoutTitle": "off",
+				"useAriaPropsForRole": "off",
+				"useSemanticElements": "off",
+				"useKeyWithClickEvents": "off"
 			},
 			"style": {
 				"noParameterAssign": "error",

@@ -18,7 +18,7 @@ function RouteComponent() {
 	useEffect(() => {
 		if (!session && !isPending) {
 			navigate({
-				to: "/login",
+				to: "/",
 			});
 		}
 	}, [session, isPending, navigate]);

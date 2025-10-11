@@ -32,6 +32,6 @@ export async function setupTestContext(): Promise<TestContext> {
 		defaultOrg: globals.organization as unknown as TestContext["defaultOrg"],
 		defaultCategoryId: globals.id,
 		defaultWarehouseId: globals.warehouse.id,
-		defaultCustomerId: "test-customer-id-" + Date.now(), // TODO: Create actual customer in tests
+		defaultCustomerId: `test-customer-id-${Date.now()}`, // TODO: Create actual customer in tests
 	};
 }
