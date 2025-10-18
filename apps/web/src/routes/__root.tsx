@@ -8,12 +8,14 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import AppLayout from "@/components/layout/app-layout";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import type { trpc } from "@/utils/trpc";
+import type { trpc } from "@/lib/trpc";
 import "../index.css";
+import type { AuthContext } from "@/components/auth-provider";
 
 export interface RouterAppContext {
 	trpc: typeof trpc;
 	queryClient: QueryClient;
+	auth: AuthContext;
 }
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
@@ -45,7 +47,7 @@ function RootComponent() {
 				attribute="class"
 				defaultTheme="dark"
 				disableTransitionOnChange
-				storageKey="vite-ui-theme"
+				storageKey="app-theme"
 			>
 				<AppLayout />
 				<Toaster richColors closeButton />

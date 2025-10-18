@@ -1,9 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { GalleryVerticalEnd } from "lucide-react";
+import { z } from "zod";
 import { LoginForm } from "@/components/login-form";
 
 export const Route = createFileRoute("/login")({
 	component: LoginPage,
+	validateSearch: z.object({
+		redirect: z.string().optional().default("/dashboard"),
+	}),
+	beforeLoad: ({ context, search }) => {
+		if (context.auth.isAuthenticated) {
+			throw redirect({ to: search.redirect });
+		}
+	},
 });
 
 function LoginPage() {

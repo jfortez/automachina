@@ -1,20 +1,16 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import ReactDOM from "react-dom/client";
+import AuthProvider, { useAuth } from "@/components/auth-provider";
 import { Spinner } from "@/components/ui/spinner";
+import { queryClient, trpc } from "./lib/trpc";
 import { routeTree } from "./routeTree.gen";
-import { queryClient, trpc } from "./utils/trpc";
 
 const router = createRouter({
 	routeTree,
 	defaultPreload: "intent",
 	defaultPendingComponent: () => <Spinner />,
-	context: { trpc, queryClient },
-	Wrap: function WrapComponent({ children }: { children: React.ReactNode }) {
-		return (
-			<QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-		);
-	},
+	context: { trpc, queryClient, auth: undefined! },
 });
 
 declare module "@tanstack/react-router" {
@@ -22,6 +18,22 @@ declare module "@tanstack/react-router" {
 		router: typeof router;
 	}
 }
+
+const InnerApp = () => {
+	const auth = useAuth();
+
+	return <RouterProvider router={router} context={{ auth }} />;
+};
+
+const App = () => {
+	return (
+		<QueryClientProvider client={queryClient}>
+			<AuthProvider>
+				<InnerApp />
+			</AuthProvider>
+		</QueryClientProvider>
+	);
+};
 
 const rootElement = document.getElementById("app");
 
@@ -31,5 +43,5 @@ if (!rootElement) {
 
 if (!rootElement.innerHTML) {
 	const root = ReactDOM.createRoot(rootElement);
-	root.render(<RouterProvider router={router} />);
+	root.render(<App />);
 }

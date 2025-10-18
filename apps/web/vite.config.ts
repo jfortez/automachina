@@ -9,7 +9,7 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
-		tanstackRouter({}),
+		tanstackRouter(),
 		react(),
 		VitePWA({
 			registerType: "autoUpdate",
