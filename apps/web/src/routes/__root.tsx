@@ -43,15 +43,10 @@ function RootComponent() {
 	return (
 		<>
 			<HeadContent />
-			<ThemeProvider
-				attribute="class"
-				defaultTheme="dark"
-				disableTransitionOnChange
-				storageKey="app-theme"
-			>
-				<AppLayout />
-				<Toaster richColors closeButton />
-			</ThemeProvider>
+
+			<AppLayout />
+			<Toaster richColors closeButton />
+
 			<TanStackRouterDevtools position="bottom-left" />
 			<ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
 		</>
