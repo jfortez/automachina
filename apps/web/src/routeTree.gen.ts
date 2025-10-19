@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthOverviewRouteImport } from './routes/_auth/overview'
 import { Route as AuthProfileIndexRouteImport } from './routes/_auth/profile/index'
+import { Route as AuthProductsIndexRouteImport } from './routes/_auth/products/index'
 import { Route as AuthDashboardIndexRouteImport } from './routes/_auth/dashboard/index'
 
 const RegisterRoute = RegisterRouteImport.update({
@@ -46,6 +47,11 @@ const AuthProfileIndexRoute = AuthProfileIndexRouteImport.update({
   path: '/profile/',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthProductsIndexRoute = AuthProductsIndexRouteImport.update({
+  id: '/products/',
+  path: '/products/',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthDashboardIndexRoute = AuthDashboardIndexRouteImport.update({
   id: '/dashboard/',
   path: '/dashboard/',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/overview': typeof AuthOverviewRoute
   '/dashboard': typeof AuthDashboardIndexRoute
+  '/products': typeof AuthProductsIndexRoute
   '/profile': typeof AuthProfileIndexRoute
 }
 export interface FileRoutesByTo {
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/overview': typeof AuthOverviewRoute
   '/dashboard': typeof AuthDashboardIndexRoute
+  '/products': typeof AuthProductsIndexRoute
   '/profile': typeof AuthProfileIndexRoute
 }
 export interface FileRoutesById {
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/_auth/overview': typeof AuthOverviewRoute
   '/_auth/dashboard/': typeof AuthDashboardIndexRoute
+  '/_auth/products/': typeof AuthProductsIndexRoute
   '/_auth/profile/': typeof AuthProfileIndexRoute
 }
 export interface FileRouteTypes {
@@ -86,9 +95,17 @@ export interface FileRouteTypes {
     | '/register'
     | '/overview'
     | '/dashboard'
+    | '/products'
     | '/profile'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register' | '/overview' | '/dashboard' | '/profile'
+  to:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/overview'
+    | '/dashboard'
+    | '/products'
+    | '/profile'
   id:
     | '__root__'
     | '/'
@@ -97,6 +114,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/_auth/overview'
     | '/_auth/dashboard/'
+    | '/_auth/products/'
     | '/_auth/profile/'
   fileRoutesById: FileRoutesById
 }
@@ -151,6 +169,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthProfileIndexRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/products/': {
+      id: '/_auth/products/'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof AuthProductsIndexRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/dashboard/': {
       id: '/_auth/dashboard/'
       path: '/dashboard'
@@ -164,12 +189,14 @@ declare module '@tanstack/react-router' {
 interface AuthRouteChildren {
   AuthOverviewRoute: typeof AuthOverviewRoute
   AuthDashboardIndexRoute: typeof AuthDashboardIndexRoute
+  AuthProductsIndexRoute: typeof AuthProductsIndexRoute
   AuthProfileIndexRoute: typeof AuthProfileIndexRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthOverviewRoute: AuthOverviewRoute,
   AuthDashboardIndexRoute: AuthDashboardIndexRoute,
+  AuthProductsIndexRoute: AuthProductsIndexRoute,
   AuthProfileIndexRoute: AuthProfileIndexRoute,
 }
 

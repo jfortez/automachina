@@ -136,17 +136,21 @@ describe("Testing Product Route", () => {
 		expect(createdProduct).toBeTruthy();
 		expect(pu).toBeTruthy();
 		expect(pu).toHaveLength(2);
-		expect(pu).toMatchObject([
-			{
-				uomCode: "EA",
-				qtyInBase: "1.".padEnd(11, "0"),
-				isBase: true,
-			},
-			{
-				uomCode: "PK",
-				qtyInBase: "6.".padEnd(11, "0"),
-			},
-		]);
+
+		const EaProductUom = pu.find((p) => p.uomCode === "EA");
+		expect(EaProductUom).toBeTruthy();
+		expect(EaProductUom).toMatchObject({
+			uomCode: "EA",
+			qtyInBase: "1.".padEnd(11, "0"),
+			isBase: true,
+		});
+
+		const PkProductUom = pu.find((p) => p.uomCode === "PK");
+		expect(PkProductUom).toBeTruthy();
+		expect(PkProductUom).toMatchObject({
+			uomCode: "PK",
+			qtyInBase: "6.".padEnd(11, "0"),
+		});
 	});
 
 	it("create a product without productUoms", async () => {

@@ -77,9 +77,22 @@ export const product = pgTable(
 );
 
 export const productRelations = relations(product, ({ one, many }) => ({
-	category: one(productCategory),
+	category: one(productCategory, {
+		fields: [product.categoryId],
+		references: [productCategory.id],
+	}),
 	images: many(productImages),
-	organization: one(organizations),
+	organization: one(organizations, {
+		fields: [product.organizationId],
+		references: [organizations.id],
+	}),
+	productFamily: one(productFamily, {
+		fields: [product.productFamilyId],
+		references: [productFamily.id],
+	}),
+	identifiers: many(productIdentifiers),
+	uoms: many(productUom),
+	prices: many(productPrice),
 }));
 
 export const productCategoryRelations = relations(
@@ -256,3 +269,87 @@ export const discountRule = pgTable(
 		index().on(t.organizationId),
 	],
 );
+
+// Relations for all tables (defined after all tables to avoid forward reference issues)
+
+export const productFamilyRelations = relations(
+	productFamily,
+	({ one, many }) => ({
+		organization: one(organizations, {
+			fields: [productFamily.organizationId],
+			references: [organizations.id],
+		}),
+		products: many(product),
+		images: many(productImages),
+	}),
+);
+
+export const productImagesRelations = relations(productImages, ({ one }) => ({
+	product: one(product, {
+		fields: [productImages.productId],
+		references: [product.id],
+	}),
+	productFamily: one(productFamily, {
+		fields: [productImages.productFamilyId],
+		references: [productFamily.id],
+	}),
+}));
+
+export const productIdentifiersRelations = relations(
+	productIdentifiers,
+	({ one }) => ({
+		product: one(product, {
+			fields: [productIdentifiers.productId],
+			references: [product.id],
+		}),
+		uom: one(uom, {
+			fields: [productIdentifiers.uomCode],
+			references: [uom.code],
+		}),
+	}),
+);
+
+export const productUomRelations = relations(productUom, ({ one }) => ({
+	product: one(product, {
+		fields: [productUom.productId],
+		references: [product.id],
+	}),
+	uom: one(uom, {
+		fields: [productUom.uomCode],
+		references: [uom.code],
+	}),
+}));
+
+export const priceListRelations = relations(priceList, ({ one, many }) => ({
+	organization: one(organizations, {
+		fields: [priceList.organizationId],
+		references: [organizations.id],
+	}),
+	prices: many(productPrice),
+}));
+
+export const productPriceRelations = relations(productPrice, ({ one }) => ({
+	product: one(product, {
+		fields: [productPrice.productId],
+		references: [product.id],
+	}),
+	priceList: one(priceList, {
+		fields: [productPrice.priceListId],
+		references: [priceList.id],
+	}),
+	customer: one(customers, {
+		fields: [productPrice.customerId],
+		references: [customers.id],
+	}),
+	uom: one(uom, {
+		fields: [productPrice.uomCode],
+		references: [uom.code],
+	}),
+}));
+
+export const discountRuleRelations = relations(discountRule, ({ one }) => ({
+	organization: one(organizations, {
+		fields: [discountRule.organizationId],
+		references: [organizations.id],
+	}),
+}));

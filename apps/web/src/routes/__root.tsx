@@ -5,12 +5,12 @@ import {
 	HeadContent,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
+import type { AuthContext } from "@/components/auth-provider";
 import AppLayout from "@/components/layout/app-layout";
-import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import type { trpc } from "@/lib/trpc";
 import "../index.css";
-import type { AuthContext } from "@/components/auth-provider";
 
 export interface RouterAppContext {
 	trpc: typeof trpc;
@@ -44,7 +44,9 @@ function RootComponent() {
 		<>
 			<HeadContent />
 
-			<AppLayout />
+			<NuqsAdapter>
+				<AppLayout />
+			</NuqsAdapter>
 			<Toaster richColors closeButton />
 
 			<TanStackRouterDevtools position="bottom-left" />

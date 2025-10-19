@@ -23,14 +23,15 @@ import type { Transaction } from "@/types";
 import { getUomConversionFactor } from "./uom";
 
 const getAllProducts = async () => {
-	const allProducts = await db.query.product.findMany({
+	return await db.query.product.findMany({
 		with: {
 			category: true,
 			images: true,
 			organization: true,
+			prices: true,
+			uoms: true,
 		},
 	});
-	return allProducts;
 };
 
 const getProductById = async (id: string) => {
