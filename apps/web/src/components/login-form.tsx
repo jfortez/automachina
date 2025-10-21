@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
 import { toast } from "sonner";
 import z from "zod";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,12 @@ import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
-export function LoginForm({
-	className,
-	...props
-}: React.ComponentProps<"form">) {
+type LoginFormProps = {
+	className?: string;
+	redirect?: string;
+} & React.ComponentProps<"form">;
+
+export function LoginForm({ className, redirect, ...props }: LoginFormProps) {
 	const navigate = useNavigate();
 	const form = useForm({
 		defaultValues: {
@@ -35,7 +37,7 @@ export function LoginForm({
 				{
 					onSuccess: () => {
 						navigate({
-							to: "/dashboard",
+							to: redirect,
 						});
 						toast.success("Sign in successful");
 					},
@@ -69,7 +71,6 @@ export function LoginForm({
 						Enter your email below to login to your account
 					</p>
 				</div>
-
 				<form.Field
 					name="email"
 					children={(field) => {

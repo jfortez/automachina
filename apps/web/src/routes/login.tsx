@@ -9,6 +9,7 @@ export const Route = createFileRoute("/login")({
 		redirect: z.string().optional().default("/dashboard"),
 	}),
 	beforeLoad: ({ context, search }) => {
+		console.log(search);
 		if (context.auth.isAuthenticated) {
 			throw redirect({ to: search.redirect });
 		}
@@ -16,6 +17,8 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
+	const search = Route.useSearch();
+	const redirect = search.redirect;
 	return (
 		<div className="grid min-h-svh lg:grid-cols-2">
 			<div className="flex flex-col gap-4 p-6 md:p-10">
@@ -29,7 +32,7 @@ function LoginPage() {
 				</div>
 				<div className="flex flex-1 items-center justify-center">
 					<div className="w-full max-w-xs">
-						<LoginForm />
+						<LoginForm redirect={redirect} />
 					</div>
 				</div>
 			</div>
