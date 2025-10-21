@@ -9,7 +9,6 @@ export const Route = createFileRoute("/login")({
 		redirect: z.string().optional().default("/dashboard"),
 	}),
 	beforeLoad: ({ context, search }) => {
-		console.log(search);
 		if (context.auth.isAuthenticated) {
 			throw redirect({ to: search.redirect });
 		}
