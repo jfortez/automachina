@@ -5,7 +5,7 @@ const DefaultLoader = ({ className }: { className?: string }) => {
 	return (
 		<div
 			className={cn(
-				"flex h-dvh items-center justify-center bg-background",
+				"flex h-dvh items-center justify-center bg-transparent",
 				className,
 			)}
 		>

@@ -6,6 +6,7 @@ import {
 	CheckCircle2,
 	DollarSign,
 	MoreHorizontal,
+	Plus,
 	Text,
 	XCircle,
 } from "lucide-react";
@@ -17,6 +18,15 @@ import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -38,8 +48,6 @@ type Product = (typeof trpc.product.getAll)["~types"]["output"][0];
 
 function RouteComponent() {
 	const { data = [] } = useQuery(trpc.product.getAll.queryOptions());
-
-	console.log(data[0]);
 
 	const columns = React.useMemo<ColumnDef<Product>[]>(
 		() => [
@@ -77,19 +85,28 @@ function RouteComponent() {
 			{
 				id: "name",
 				accessorKey: "name",
-				header: "name",
+				header: "Name",
 				enableColumnFilter: true,
 			},
 			{
 				id: "baseUom",
 				accessorKey: "baseUom",
-				header: "baseUom",
+				header: "UOM",
 				enableColumnFilter: true,
 			},
 			{
 				id: "isPhysical",
 				accessorKey: "isPhysical",
-				header: "isPhysical",
+				header: "Is Physical",
+				enableColumnFilter: true,
+				cell: ({ row }) => (
+					<Checkbox checked={row.original.isPhysical} disabled />
+				),
+			},
+			{
+				id: "organization",
+				accessorKey: "organization.name",
+				header: "Organization",
 				enableColumnFilter: true,
 			},
 
@@ -130,7 +147,30 @@ function RouteComponent() {
 	return (
 		<div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
 			<DataTable table={table}>
-				<DataTableToolbar table={table} />
+				<div className="flex items-center justify-between">
+					<Dialog>
+						<DialogTrigger asChild>
+							<Button size="icon">
+								<Plus className="h-4 w-4" />
+								<span className="sr-only">Add product</span>
+							</Button>
+						</DialogTrigger>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>Add Product</DialogTitle>
+								<DialogDescription>
+									Add a new product to the store.
+								</DialogDescription>
+							</DialogHeader>
+							<div>hola</div>
+							<DialogFooter>
+								<Button variant="ghost">Cancel</Button>
+								<Button type="submit">Add Product</Button>
+							</DialogFooter>
+						</DialogContent>
+					</Dialog>
+					<DataTableToolbar table={table} />
+				</div>
 			</DataTable>
 		</div>
 	);
