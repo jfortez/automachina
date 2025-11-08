@@ -1,38 +1,39 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import type { Column, ColumnDef } from "@tanstack/react-table";
-import {
-	CheckCircle,
-	CheckCircle2,
-	DollarSign,
-	MoreHorizontal,
-	Plus,
-	Text,
-	XCircle,
-} from "lucide-react";
-
+import type { ColumnDef } from "@tanstack/react-table";
+import { MoreHorizontal, Plus } from "lucide-react";
 import * as React from "react";
+import { z } from "zod";
 import { DataTable } from "@/components/data-table/data-table";
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
-import { Badge } from "@/components/ui/badge";
+import { FormKit } from "@/components/form-kit";
+import {
+	Field,
+	FieldControl,
+	FieldDescription,
+	FieldError,
+	FieldLabel,
+	Form,
+} from "@/components/form-kit/form";
+import { useAppForm } from "@/components/form-kit/form-hook";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
 import { useDataTable } from "@/hooks/use-data-table";
 import { trpc } from "@/lib/trpc";
 
@@ -48,6 +49,18 @@ type Product = (typeof trpc.product.getAll)["~types"]["output"][0];
 
 function RouteComponent() {
 	const { data = [] } = useQuery(trpc.product.getAll.queryOptions());
+	// const form = useAppForm({
+	//   defaultValues: {
+	//     foo: "/",
+	//     baz: "weaboo",
+	//   },
+	//   validators: {
+	//     onChange: z.object({
+	//       foo: z.string().min(1, "Name is required"),
+	//       baz: z.string().min(1, "Name is required"),
+	//     }),
+	//   },
+	// });
 
 	const columns = React.useMemo<ColumnDef<Product>[]>(
 		() => [
@@ -148,27 +161,75 @@ function RouteComponent() {
 		<div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
 			<DataTable table={table}>
 				<div className="flex items-center justify-between">
-					<Dialog>
-						<DialogTrigger asChild>
+					<Sheet>
+						<SheetTrigger asChild>
 							<Button size="icon">
 								<Plus className="h-4 w-4" />
 								<span className="sr-only">Add product</span>
 							</Button>
-						</DialogTrigger>
-						<DialogContent>
-							<DialogHeader>
-								<DialogTitle>Add Product</DialogTitle>
-								<DialogDescription>
+						</SheetTrigger>
+						<SheetContent>
+							<SheetHeader>
+								<SheetTitle>Add Product</SheetTitle>
+								<SheetDescription>
 									Add a new product to the store.
-								</DialogDescription>
-							</DialogHeader>
-							<div>hola</div>
-							<DialogFooter>
-								<Button variant="ghost">Cancel</Button>
+								</SheetDescription>
+							</SheetHeader>
+							<div className="p-4">
+								<div className="space-y-2">
+									<FormKit
+										schema={z.object({
+											foo: z.string().min(1, "Name is required"),
+										})}
+										initialValues={{ foo: "cabrones" }}
+									/>
+									{/* <form.AppForm>
+                    <Form>
+                      <form.AppField name="foo">
+                        {(field) => {
+                          console.log({ field });
+                          return (
+                            <Field>
+                              <FieldLabel>Name</FieldLabel>
+                              <FieldControl>
+                                <Input
+                                  type="text"
+                                  placeholder="Enter your name"
+                                  value={field.state.value}
+                                  onChange={(e) => field.handleChange(e.target.value)}
+                                  onBlur={field.handleBlur}
+                                />
+                              </FieldControl>
+                              <FieldDescription>Enter your name</FieldDescription>
+                              <FieldError />
+                            </Field>
+                          );
+                        }}
+                      </form.AppField>
+                    </Form>
+                    <form.Subscribe
+                      selector={(state) => ({
+                        canSubmit: state.canSubmit,
+                        isSubmitted: state.isSubmitted,
+                      })}
+                    >
+                      {({ canSubmit, isSubmitted }) => {
+                        return (
+                          <Button disabled={!canSubmit}>
+                            {isSubmitted ? "Submitting..." : "Submit"}
+                          </Button>
+                        );
+                      }}
+                    </form.Subscribe>
+                  </form.AppForm> */}
+								</div>
+							</div>
+							<SheetFooter>
 								<Button type="submit">Add Product</Button>
-							</DialogFooter>
-						</DialogContent>
-					</Dialog>
+								<Button variant="ghost">Cancel</Button>
+							</SheetFooter>
+						</SheetContent>
+					</Sheet>
 					<DataTableToolbar table={table} />
 				</div>
 			</DataTable>
