@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { useFormContext } from "./form";
@@ -22,7 +23,15 @@ export const SubmitButton = ({
 		if (typeof _subtmitText === "function") {
 			return _subtmitText(isSubmitting);
 		}
-		return _subtmitText || (isSubmitting ? "Saving..." : "Save Changes");
+		return _subtmitText ? (
+			isSubmitting ? (
+				<Spinner />
+			) : (
+				_subtmitText || "Save Changes"
+			)
+		) : (
+			"Submit"
+		);
 	};
 
 	const submitText = (isSubmitting: boolean) => {
