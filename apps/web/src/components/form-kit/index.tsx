@@ -1,16 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { useMemo } from "react";
 
 import type { z } from "zod";
-import { Button } from "@/components/ui/button";
 import { Form } from "./form";
 import { FormComponentsProvider } from "./form-context";
 import FormField, { type FormFieldType } from "./form-field";
 import { useAppForm } from "./form-hook";
+import { SubmitButton, type SubmitProps } from "./subtmit";
 import type {
 	Components,
-	Field,
+	FieldKit,
 	FieldTransformer,
 	FormSubmitHandler,
 } from "./types";
@@ -20,12 +18,14 @@ import { ZodProvider } from "./zod";
 type FormProps<Z extends z.ZodObject<any>, C extends Components> = {
 	schema: Z;
 	initialValues?: z.input<Z>;
-	fields?: Field<Z, C>[];
+	fields?: FieldKit<Z, C>[];
 	fieldTransformer?: FieldTransformer<Z, C>;
 	onSubmit?: FormSubmitHandler<Z>;
 	onCancel?: () => void;
 	components?: C;
 	showSubmit?: boolean;
+	children?: React.ReactNode;
+	buttonSettings?: Omit<SubmitProps, "handleCancel">;
 };
 
 export const FormKit = <
@@ -41,8 +41,10 @@ export const FormKit = <
 		onSubmit,
 		onCancel,
 		fieldTransformer,
-		showSubmit = true,
+		showSubmit = false,
 		components = {},
+		children,
+		buttonSettings,
 	} = props;
 
 	const schemaProvider = useMemo(() => new ZodProvider(schema), [schema]);
@@ -61,12 +63,12 @@ export const FormKit = <
 		validators: {
 			onSubmit: schema,
 		},
-		onSubmit: async ({ value }) => {
-			await onSubmit?.(value);
+		onSubmit: async (submitValues) => {
+			await onSubmit?.(submitValues.value);
 		},
 	});
 
-	const formFields = useMemo<Field<Z, C>[]>(() => {
+	const formFields = useMemo<FieldKit<Z, C>[]>(() => {
 		if (fields.length > 0) return fields;
 
 		if (!parsedSchema) return [];
@@ -77,7 +79,6 @@ export const FormKit = <
 	const rows = useMemo(() => generateGrid<Z, C>(formFields), [formFields]);
 
 	const handleCancel = () => {
-		form.reset();
 		onCancel?.();
 	};
 
@@ -98,11 +99,10 @@ export const FormKit = <
 									>
 										{col.type !== "hidden" && (
 											<form.AppField name={col.name}>
-												{(field) => {
+												{() => {
 													return (
 														<FormField
 															metadata={col as unknown as FormFieldType<C>}
-															field={field}
 														/>
 													);
 												}}
@@ -115,31 +115,9 @@ export const FormKit = <
 					</div>
 
 					{showSubmit && (
-						<form.Subscribe
-							selector={(state) => ({
-								isSubmitting: state.isSubmitting,
-								canSubmit: state.canSubmit,
-							})}
-						>
-							{({ isSubmitting, canSubmit }) => {
-								return (
-									<div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-										<Button
-											type="button"
-											variant="outline"
-											onClick={handleCancel}
-											disabled={isSubmitting}
-										>
-											Cancel
-										</Button>
-										<Button type="submit" disabled={!canSubmit}>
-											{isSubmitting ? "Saving..." : "Save Changes"}
-										</Button>
-									</div>
-								);
-							}}
-						</form.Subscribe>
+						<SubmitButton handleCancel={handleCancel} {...buttonSettings} />
 					)}
+					{children}
 				</Form>
 			</form.AppForm>
 		</FormComponentsProvider>

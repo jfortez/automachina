@@ -35,6 +35,7 @@ function useFieldComponentContext() {
 
 	const errors = useStore(field.store, (state) => state.meta.errors);
 	const isTouched = useStore(field.store, (state) => state.meta.isTouched);
+
 	const submissionAttempts = useStore(
 		field.form.store,
 		(state) => state.submissionAttempts,
@@ -124,7 +125,8 @@ function FieldControl(props: React.ComponentProps<typeof Slot>) {
 
 	return (
 		<Slot
-			data-slot="form-control"
+			data-slot="input-group-control"
+			className="flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent"
 			id={formControlId}
 			aria-describedby={describedBy || undefined}
 			aria-invalid={hasError}

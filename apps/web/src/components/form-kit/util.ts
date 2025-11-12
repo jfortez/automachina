@@ -3,20 +3,20 @@ import type { z } from "zod";
 import type { FormFieldType } from "./form-field";
 import type {
 	Components,
-	Field,
+	FieldKit,
 	FieldTransformer,
 	ParsedSchema,
 	Sizes,
 } from "./types";
 
-type InternalField<C extends Components> = Omit<Field<any, C>, "type"> & {
+type InternalField<C extends Components> = Omit<FieldKit<any, C>, "type"> & {
 	type: FormFieldType<C>["type"] | "hidden";
 };
 
 export function generateGrid<
 	Z extends z.ZodObject<any>,
 	C extends Components = NonNullable<unknown>,
->(inputs: Field<Z, C>[]): InternalField<C>[][] {
+>(inputs: FieldKit<Z, C>[]): InternalField<C>[][] {
 	const GRID_WIDTH = 12;
 	const result: InternalField<C>[][] = [];
 	let currentRow: InternalField<C>[] = [];
@@ -106,23 +106,23 @@ export function generateFields<
 >(
 	schema: ParsedSchema,
 	fieldTransformer?: FieldTransformer<Z, C>,
-): Field<Z, C>[] {
-	const defaultFields: Field<Z, C>[] = schema.fields.map(
+): FieldKit<Z, C>[] {
+	const defaultFields: FieldKit<Z, C>[] = schema.fields.map(
 		(field) =>
 			({
 				name: field.key,
 				size: 12,
 				type: toBaseType(field.type),
 				label: field.key,
-			}) as unknown as Field<Z, C>,
+			}) as unknown as FieldKit<Z, C>,
 	);
 
 	if (!fieldTransformer) return defaultFields;
 
 	const getTransformResult = (
-		field: Field<Z, C>,
+		field: FieldKit<Z, C>,
 		transformer: FieldTransformer<Z, C>,
-	): Field<Z, C> => {
+	): FieldKit<Z, C> => {
 		const { name } = field;
 
 		// ensure some fields are not present in the original field
@@ -136,7 +136,7 @@ export function generateFields<
 					...field,
 					...transformResult,
 					...privateValues,
-				} as unknown as Field<Z, C>;
+				} as unknown as FieldKit<Z, C>;
 			}
 			return field;
 		}
@@ -150,7 +150,7 @@ export function generateFields<
 					? transformResult(field)
 					: transformResult),
 				...privateValues,
-			} as unknown as Field<Z, C>;
+			} as unknown as FieldKit<Z, C>;
 		}
 
 		// Si el campo no tiene transformador, devolverlo tal cual

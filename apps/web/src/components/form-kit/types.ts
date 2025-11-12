@@ -6,7 +6,7 @@ export type Components = Record<string, React.ComponentType<any>>;
 
 export type Sizes = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
-export type Field<
+export type FieldKit<
 	ZObject extends z.ZodObject<any> = z.ZodObject<any>,
 	C extends Components = NonNullable<unknown>,
 > = FormFieldType<C> & {
@@ -30,7 +30,7 @@ type _TransformField<C extends Components = NonNullable<unknown>> =
 type FieldTransformFunction<
 	Z extends z.ZodObject<any>,
 	C extends Components,
-> = (field: Field<Z, C>) => Partial<_TransformField<C>> | undefined;
+> = (field: FieldKit<Z, C>) => Partial<_TransformField<C>> | undefined;
 
 type FieldTransformObject<
 	Z extends z.ZodObject<any> = z.ZodObject<any>,

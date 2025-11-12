@@ -1,9 +1,5 @@
-import type { ControllerRenderProps } from "react-hook-form";
-
-type DataProps = ControllerRenderProps;
-
-export const DateComponent = (props: DataProps) => {
-	return <input type="date" {...props} />;
+export const DateComponent = () => {
+	return <input type="date" />;
 };
 
 export default DateComponent;

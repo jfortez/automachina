@@ -1,8 +1,8 @@
 import { createContext, useContext } from "react";
 import type { Components, ParsedSchema } from "./types";
 
-type IFormContext = {
-	components?: Components;
+type IFormContext<C extends Components = Components> = {
+	components?: C;
 	schema: ParsedSchema;
 };
 

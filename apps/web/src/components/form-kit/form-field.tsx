@@ -1,4 +1,11 @@
-import Field, { type FieldProps, type FieldType } from "./field";
+import { CalendarIcon, CaseSensitiveIcon, Lock } from "lucide-react";
+import type React from "react";
+import Field, {
+	type BaseFieldType,
+	type FieldProps,
+	type FieldType,
+} from "./fields";
+import type { FieldAttributes } from "./fields/type";
 import {
 	FieldControl,
 	FieldDescription,
@@ -8,32 +15,42 @@ import {
 } from "./form";
 import type { Components } from "./types";
 
+const defaultAddonIcons: Record<BaseFieldType, React.ReactNode> = {
+	text: <CaseSensitiveIcon />,
+	date: <CalendarIcon />,
+	password: <Lock />,
+};
+
 type BaseField = {
 	name: string;
 	label?: string;
 	placeholder?: string;
 	description?: string;
 	element?: React.ReactNode;
+	addonIcon?: React.ReactNode;
+	showAddonIcon?: boolean;
 };
 
-type FormFieldMap<C extends Components> = {
+type FormFieldMap<C extends Components | undefined = undefined> = {
 	[K in FieldType<C>]: BaseField & {
 		type: K;
-		fieldProps?: FieldProps<C, K>;
+		fieldProps?: Omit<FieldProps<C, K & FieldType>, keyof FieldAttributes>;
 	};
 };
 
-export type FormFieldType<C extends Components = NonNullable<unknown>> =
-	FormFieldMap<C>[FieldType<C>];
+export type FormFieldType<
+	C extends Components | undefined = NonNullable<unknown>,
+> = FormFieldMap<C>[FieldType<C>];
 
-type FormInputProps<C extends Components> = {
+type FormInputProps<C extends Components | undefined = NonNullable<unknown>> = {
 	metadata: FormFieldType<C>;
-	field: any;
 };
-const FormField = <C extends Components>({
+
+const FormField = <C extends Components | undefined = undefined>({
 	metadata,
-	field,
 }: FormInputProps<C>) => {
+	const { addonIcon: _addonIcon, showAddonIcon = true } = metadata;
+	const addonIcon = _addonIcon || defaultAddonIcons[metadata.type];
 	return (
 		<FieldPrimitive>
 			{metadata.label && <FieldLabel>{metadata.label}</FieldLabel>}
@@ -42,11 +59,10 @@ const FormField = <C extends Components>({
 					metadata.element
 				) : (
 					<Field
-						inputType={metadata.type}
-						placeholder={metadata.placeholder}
-						value={field.state.value}
-						onChange={(e) => field.handleChange(e.target.value)}
-						onBlur={field.handleBlur}
+						inputType={metadata.type as unknown as any}
+						showAddonIcon={showAddonIcon}
+						addonIcon={addonIcon}
+						{...metadata.fieldProps}
 					/>
 				)}
 			</FieldControl>
