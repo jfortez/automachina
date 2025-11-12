@@ -4,6 +4,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import AuthProvider, { useAuth } from "@/components/auth-provider";
 import AuthFallback from "./components/auth-fallback";
 import { ThemeProvider } from "./components/theme-provider";
+import { Toaster } from "./components/ui/sonner";
 import { queryClient, trpc } from "./lib/trpc";
 import { router } from "./router";
 
@@ -30,6 +31,7 @@ export const App = () => {
 					</AuthFallback>
 				</AuthProvider>
 			</QueryClientProvider>
+			<Toaster richColors closeButton />
 		</ThemeProvider>
 	);
 };

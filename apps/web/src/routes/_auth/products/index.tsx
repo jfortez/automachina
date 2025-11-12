@@ -179,49 +179,37 @@ function RouteComponent() {
 								<div className="space-y-2">
 									<FormKit
 										schema={z.object({
-											foo: z.string().min(1, "Name is required"),
+											sku: z.string().min(6, "SKU is requiered").default(""),
+											name: z.string().min(1, "Name is required").default(""),
+											uom: z.string().min(1, "UOM is required").default(""),
 										})}
-										initialValues={{ foo: "cabrones" }}
+										fields={[
+											{
+												name: "sku",
+												label: "SKU",
+												description: "SKU is requiered",
+												size: 12,
+												type: "text",
+												placeholder: "123456",
+											},
+											{
+												name: "name",
+												label: "Product Name",
+												description: "Name is required",
+												type: "text",
+												size: 6,
+												placeholder: "Apple",
+											},
+											{
+												name: "uom",
+												label: "UOM",
+												description: "Select a UOM",
+												type: "text",
+												size: 6,
+												placeholder: "kg",
+											},
+										]}
 									/>
-									{/* <form.AppForm>
-                    <Form>
-                      <form.AppField name="foo">
-                        {(field) => {
-                          console.log({ field });
-                          return (
-                            <Field>
-                              <FieldLabel>Name</FieldLabel>
-                              <FieldControl>
-                                <Input
-                                  type="text"
-                                  placeholder="Enter your name"
-                                  value={field.state.value}
-                                  onChange={(e) => field.handleChange(e.target.value)}
-                                  onBlur={field.handleBlur}
-                                />
-                              </FieldControl>
-                              <FieldDescription>Enter your name</FieldDescription>
-                              <FieldError />
-                            </Field>
-                          );
-                        }}
-                      </form.AppField>
-                    </Form>
-                    <form.Subscribe
-                      selector={(state) => ({
-                        canSubmit: state.canSubmit,
-                        isSubmitted: state.isSubmitted,
-                      })}
-                    >
-                      {({ canSubmit, isSubmitted }) => {
-                        return (
-                          <Button disabled={!canSubmit}>
-                            {isSubmitted ? "Submitting..." : "Submit"}
-                          </Button>
-                        );
-                      }}
-                    </form.Subscribe>
-                  </form.AppForm> */}
 								</div>
 							</div>
 							<SheetFooter>

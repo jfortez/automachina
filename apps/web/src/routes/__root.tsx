@@ -8,7 +8,7 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 import type { AuthContext } from "@/components/auth-provider";
 import AppLayout from "@/components/layout/app-layout";
-import { Toaster } from "@/components/ui/sonner";
+
 import type { trpc } from "@/lib/trpc";
 import "../index.css";
 
@@ -47,7 +47,6 @@ function RootComponent() {
 			<NuqsAdapter>
 				<AppLayout />
 			</NuqsAdapter>
-			<Toaster richColors closeButton />
 
 			<TanStackRouterDevtools position="bottom-left" />
 			<ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
