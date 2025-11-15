@@ -7,7 +7,27 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-	return <SheetPrimitive.Root data-slot="sheet" {...props} />;
+	const handleOpenChange = (open: boolean) => {
+		const activeElement = document.activeElement;
+		if (activeElement) {
+			const targetClasses = [".e-ddl", "e-lib", ".e-input-group"];
+			const isSyncfusionComponent = targetClasses.some(
+				(className) =>
+					activeElement.classList.contains(className) ||
+					activeElement.closest(className),
+			);
+			if (isSyncfusionComponent) return;
+		}
+
+		props.onOpenChange?.(open);
+	};
+	return (
+		<SheetPrimitive.Root
+			data-slot="sheet"
+			onOpenChange={handleOpenChange}
+			{...props}
+		/>
+	);
 }
 
 function SheetTrigger({

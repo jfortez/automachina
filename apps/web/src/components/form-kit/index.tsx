@@ -15,6 +15,8 @@ import type {
 import { generateFields, generateGrid } from "./util";
 import { ZodProvider } from "./zod";
 
+export type { FieldKit };
+
 type FormProps<Z extends z.ZodObject<any>, C extends Components> = {
 	schema: Z;
 	initialValues?: z.input<Z>;
