@@ -1,8 +1,8 @@
-import { CalendarIcon, CaseSensitiveIcon, Lock } from "lucide-react";
+import { CalendarIcon, CaseSensitiveIcon, Lock, Type } from "lucide-react";
 import type React from "react";
 import Field, {
+	type BaseFieldProps,
 	type BaseFieldType,
-	type FieldProps,
 	type FieldType,
 } from "./fields";
 import type { FieldAttributes } from "./fields/type";
@@ -16,9 +16,10 @@ import {
 import type { Components } from "./types";
 
 const defaultAddonIcons: Record<BaseFieldType, React.ReactNode> = {
-	text: <CaseSensitiveIcon />,
+	text: <Type />,
 	date: <CalendarIcon />,
 	password: <Lock />,
+	textarea: <CaseSensitiveIcon />,
 };
 
 type BaseField = {
@@ -34,7 +35,7 @@ type BaseField = {
 type FormFieldMap<C extends Components | undefined = undefined> = {
 	[K in FieldType<C>]: BaseField & {
 		type: K;
-		fieldProps?: Omit<FieldProps<C, K & FieldType>, keyof FieldAttributes>;
+		fieldProps?: Omit<BaseFieldProps<C, K & FieldType>, keyof FieldAttributes>;
 	};
 };
 

@@ -5,11 +5,13 @@ import type { Components } from "../types";
 import DateComponment from "./date";
 import Input from "./input";
 import Password from "./password";
+import Textarea from "./textarea";
 
 const BaseInputComponents = {
 	text: Input,
 	date: DateComponment,
 	password: Password,
+	textarea: Textarea,
 };
 
 export type BaseFieldType = keyof typeof BaseInputComponents;
@@ -34,7 +36,7 @@ export type FieldComponentProps<
 	? React.ComponentProps<(typeof BaseInputComponents & C)[T]>
 	: React.ComponentProps<(typeof BaseInputComponents)[T & BaseFieldType]>;
 
-export type FieldProps<
+export type BaseFieldProps<
 	C extends Components | undefined = undefined,
 	T extends FieldType<C | undefined> | FieldType = FieldType<C | undefined>,
 > = FieldComponentProps<C, T>;
@@ -47,7 +49,7 @@ const Field = <
 	showAddonIcon,
 	addonIcon,
 	...props
-}: FieldProps<C, T> & _InternalProps<C, T>) => {
+}: BaseFieldProps<C, T> & _InternalProps<C, T>) => {
 	const { components } = useFormKit();
 	const Component = { ...BaseInputComponents, ...(components as C) }[inputType];
 
@@ -56,7 +58,13 @@ const Field = <
 	return (
 		<InputGroup>
 			<Component {...(props as any)} />
-			{showAddonIcon && <InputGroupAddon>{addonIcon}</InputGroupAddon>}
+			{showAddonIcon && (
+				<InputGroupAddon
+					align={inputType === "textarea" ? "block-end" : "inline-start"}
+				>
+					{addonIcon}
+				</InputGroupAddon>
+			)}
 		</InputGroup>
 	);
 };

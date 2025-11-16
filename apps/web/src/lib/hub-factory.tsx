@@ -26,4 +26,5 @@ export const productSheet = f
 				? "Fill in the details of the product you want to create"
 				: "Fill in the details of the product you want to edit";
 		},
+		className: "!max-w-none w-3/8",
 	});
