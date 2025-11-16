@@ -19,11 +19,12 @@ export type FactoryStore<TKeys extends readonly string[]> = {
 
 type ValueOrFunction<T, Store> = T | ((value: Store) => T);
 
-type _SharedProps = {
-	title: string;
-	description: string;
-	className: string;
-};
+export type _SharedProps<ExtendedProps extends object = object> =
+	ExtendedProps & {
+		title: string;
+		description: string;
+		className: string;
+	};
 
 export type InitHocProps<
 	ExtendedProps extends object = object,
@@ -32,12 +33,9 @@ export type InitHocProps<
 	[K in keyof _SharedProps]?: ValueOrFunction<_SharedProps[K], Store>;
 };
 
-export type HubItemComponentProps<
-	ExtendedProps extends object = object,
-	Store = any,
-> = {
+export type HubItemComponentProps<ExtendedProps extends object = object> = {
 	children?: React.ReactNode;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
 	t: ReturnType<typeof tunnel>;
-} & InitHocProps<ExtendedProps, Store>;
+} & _SharedProps<ExtendedProps>;

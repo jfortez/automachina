@@ -5,6 +5,7 @@ import tunnel from "tunnel-rat";
 import { create, type StoreApi, type UseBoundStore } from "zustand";
 
 import type {
+	_SharedProps,
 	Capitalize,
 	FactoryStore,
 	HubItemComponentProps,
@@ -174,7 +175,7 @@ export class Builder<
 					}
 					return [key, value];
 				}),
-			) as InitHocProps<TExtendedProps>;
+			) as _SharedProps<TExtendedProps>;
 
 			return (
 				<HubItemComponent
