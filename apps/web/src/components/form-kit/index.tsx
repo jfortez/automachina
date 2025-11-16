@@ -12,7 +12,7 @@ import type {
 	FieldTransformer,
 	FormSubmitHandler,
 } from "./types";
-import { generateFields, generateGrid } from "./util";
+import { generateGrid, parseFields } from "./util";
 import { ZodProvider } from "./zod";
 
 export type { FieldKit };
@@ -70,15 +70,13 @@ export const FormKit = <
 		},
 	});
 
-	const formFields = useMemo<FieldKit<Z, C>[]>(() => {
-		if (fields.length > 0) return fields;
+	const rowFields = useMemo(() => {
+		const _fields = fields.length > 0 ? fields : parsedSchema;
 
-		if (!parsedSchema) return [];
+		const parsedFields = parseFields<Z, C>(_fields, fieldTransformer);
 
-		return generateFields<Z, C>(parsedSchema, fieldTransformer);
-	}, [fields, parsedSchema, fieldTransformer]);
-
-	const rows = useMemo(() => generateGrid<Z, C>(formFields), [formFields]);
+		return generateGrid<Z, C>(parsedFields);
+	}, [fields, fieldTransformer, parsedSchema]);
 
 	const handleCancel = () => {
 		onCancel?.();
@@ -89,7 +87,7 @@ export const FormKit = <
 			<form.AppForm>
 				<Form className="flex flex-col gap-6">
 					<div className="flex flex-col gap-4">
-						{rows.map((row, index) => (
+						{rowFields.map((row, index) => (
 							<div key={`row-${index + 1}`} className="grid grid-cols-12 gap-4">
 								{row.map((col) => (
 									<div

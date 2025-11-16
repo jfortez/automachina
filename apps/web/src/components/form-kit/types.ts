@@ -6,13 +6,20 @@ export type Components = Record<string, React.ComponentType<any>>;
 
 export type Sizes = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 
+export type SpacerType = {
+	type: "fill";
+	size?: Sizes;
+};
+
 export type FieldKit<
 	ZObject extends z.ZodObject<any> = z.ZodObject<any>,
 	C extends Components = NonNullable<unknown>,
-> = FormFieldType<C> & {
-	name: keyof z.infer<ZObject>;
-	size?: Sizes;
-};
+> =
+	| (FormFieldType<C> & {
+			name: keyof z.infer<ZObject>;
+			size?: Sizes;
+	  })
+	| SpacerType;
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -30,7 +37,9 @@ type _TransformField<C extends Components = NonNullable<unknown>> =
 type FieldTransformFunction<
 	Z extends z.ZodObject<any>,
 	C extends Components,
-> = (field: FieldKit<Z, C>) => Partial<_TransformField<C>> | undefined;
+> = (
+	field: Exclude<FieldKit<Z, C>, SpacerType>,
+) => Partial<_TransformField<C>> | undefined;
 
 type FieldTransformObject<
 	Z extends z.ZodObject<any> = z.ZodObject<any>,

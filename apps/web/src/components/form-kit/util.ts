@@ -7,16 +7,20 @@ import type {
 	FieldTransformer,
 	ParsedSchema,
 	Sizes,
+	SpacerType,
 } from "./types";
 
-type InternalField<C extends Components> = Omit<FieldKit<any, C>, "type"> & {
+type InternalField<C extends Components> = Omit<
+	Exclude<FieldKit<any, C>, SpacerType>,
+	"type"
+> & {
 	type: FormFieldType<C>["type"] | "hidden";
 };
 
 export function generateGrid<
 	Z extends z.ZodObject<any>,
 	C extends Components = NonNullable<unknown>,
->(inputs: FieldKit<Z, C>[]): InternalField<C>[][] {
+>(fields: FieldKit<Z, C>[]): InternalField<C>[][] {
 	const GRID_WIDTH = 12;
 	const result: InternalField<C>[][] = [];
 	let currentRow: InternalField<C>[] = [];
@@ -31,42 +35,55 @@ export function generateGrid<
 			label: "",
 		}) as InternalField<C>;
 
-	for (const item of inputs) {
-		const itemWidth = item.size || 12;
+	for (const item of fields) {
+		const field = item as Exclude<FieldKit<any, C>, SpacerType>;
+		const isFillRowType = field.type === "fill";
 
-		// Validate item size
-		if (itemWidth < 1 || itemWidth > 12) {
-			throw new Error(`Invalid size ${itemWidth} for field ${item.name}`);
+		if (isFillRowType) {
+			if (currentWidth > 0) {
+				const remaining = GRID_WIDTH - currentWidth;
+				currentRow.push(createPlaceholder(remaining as Sizes));
+				result.push([...currentRow]);
+				currentRow = [];
+				currentWidth = 0;
+			} else {
+				result.push([createPlaceholder(12)]);
+			}
+			continue;
 		}
 
-		// If adding this item exceeds row width or row is full, start new row
-		if (
-			currentWidth + itemWidth > GRID_WIDTH ||
-			(currentRow.length === 0 && itemWidth === GRID_WIDTH)
-		) {
+		const itemWidth = field.size || 12;
+
+		if (itemWidth < 1 || itemWidth > 12) {
+			throw new Error(
+				`Invalid size ${itemWidth} for field ${String(field.name) || "Unknown"}`,
+			);
+		}
+
+		// If adding this item exceeds row width, start new row
+		if (currentWidth + itemWidth > GRID_WIDTH) {
 			if (currentRow.length > 0) {
 				// Fill remaining space with placeholders
-				while (currentWidth < GRID_WIDTH) {
-					const remaining = GRID_WIDTH - currentWidth;
-					currentRow.push(createPlaceholder(remaining as Sizes));
-					currentWidth += remaining;
-				}
-				result.push(currentRow);
+				const remaining = GRID_WIDTH - currentWidth;
+				currentRow.push(createPlaceholder(remaining as Sizes));
+				result.push([...currentRow]);
 			}
 			currentRow = [];
 			currentWidth = 0;
 		}
 
-		// Add item to current row
-		currentRow.push({
-			...item,
-			size: itemWidth,
-		} as unknown as InternalField<C>);
+		if (!isFillRowType) {
+			currentRow.push({
+				...field,
+				size: itemWidth,
+				name: field.name,
+			} as InternalField<C>);
+		}
 		currentWidth += itemWidth;
 
 		// If row is exactly full, push it
 		if (currentWidth === GRID_WIDTH) {
-			result.push(currentRow);
+			result.push([...currentRow]);
 			currentRow = [];
 			currentWidth = 0;
 		}
@@ -74,17 +91,16 @@ export function generateGrid<
 
 	// Handle last row
 	if (currentRow.length > 0) {
-		while (currentWidth < GRID_WIDTH) {
-			const remaining = GRID_WIDTH - currentWidth;
+		const remaining = GRID_WIDTH - currentWidth;
+		if (remaining > 0) {
 			currentRow.push(createPlaceholder(remaining as Sizes));
-			currentWidth += remaining;
 		}
-		result.push(currentRow);
+		result.push([...currentRow]);
 	}
 
 	// Validate that each row sums to exactly 12
 	result.forEach((row, index) => {
-		const rowWidth = row.reduce((sum, item) => sum + (item.size || 12), 0);
+		const rowWidth = row.reduce((sum, item) => sum + (item.size ?? 6), 0);
 		if (rowWidth !== GRID_WIDTH) {
 			throw new Error(`Row ${index} has invalid width: ${rowWidth}`);
 		}
@@ -92,7 +108,6 @@ export function generateGrid<
 
 	return result;
 }
-
 const toBaseType = (type: string) => {
 	if (type === "string") return "text";
 	if (type === "number") return "number";
@@ -100,27 +115,31 @@ const toBaseType = (type: string) => {
 	return "text";
 };
 
-export function generateFields<
+export function parseFields<
 	Z extends z.ZodObject<any>,
 	C extends Components = NonNullable<unknown>,
 >(
-	schema: ParsedSchema,
+	schema: ParsedSchema | FieldKit<Z, C>[],
 	fieldTransformer?: FieldTransformer<Z, C>,
 ): FieldKit<Z, C>[] {
-	const defaultFields: FieldKit<Z, C>[] = schema.fields.map(
-		(field) =>
-			({
-				name: field.key,
-				size: 12,
-				type: toBaseType(field.type),
-				label: field.key,
-			}) as unknown as FieldKit<Z, C>,
-	);
+	let defaultFields: FieldKit<Z, C>[] = schema as FieldKit<Z, C>[];
+
+	if ("fields" in schema && schema.fields.length > 0) {
+		defaultFields = schema.fields.map(
+			(field) =>
+				({
+					name: field.key,
+					size: 12,
+					type: toBaseType(field.type),
+					label: field.key,
+				}) as unknown as FieldKit<Z, C>,
+		);
+	}
 
 	if (!fieldTransformer) return defaultFields;
 
 	const getTransformResult = (
-		field: FieldKit<Z, C>,
+		field: Exclude<FieldKit<Z, C>, SpacerType>,
 		transformer: FieldTransformer<Z, C>,
 	): FieldKit<Z, C> => {
 		const { name } = field;
@@ -158,6 +177,10 @@ export function generateFields<
 	};
 
 	return defaultFields.map((field) => {
-		return getTransformResult(field, fieldTransformer);
+		if (field.type === "fill") return field;
+		return getTransformResult(
+			field as Exclude<FieldKit<Z, C>, SpacerType>,
+			fieldTransformer,
+		);
 	});
 }
