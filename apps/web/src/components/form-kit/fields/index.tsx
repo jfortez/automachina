@@ -5,6 +5,7 @@ import type { Components } from "../types";
 import DateComponment from "./date";
 import Input from "./input";
 import Password from "./password";
+import Select from "./select";
 import Textarea from "./textarea";
 
 const BaseInputComponents = {
@@ -12,6 +13,7 @@ const BaseInputComponents = {
 	date: DateComponment,
 	password: Password,
 	textarea: Textarea,
+	select: Select,
 };
 
 export type BaseFieldType = keyof typeof BaseInputComponents;
@@ -58,7 +60,7 @@ const Field = <
 	return (
 		<InputGroup>
 			<Component {...(props as any)} />
-			{showAddonIcon && (
+			{showAddonIcon && addonIcon && (
 				<InputGroupAddon
 					align={inputType === "textarea" ? "block-end" : "inline-start"}
 				>

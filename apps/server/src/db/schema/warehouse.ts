@@ -7,16 +7,15 @@ import {
 	unique,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { organizations } from "./organizations";
+import { organization } from "./auth";
 import { uuidPk } from "./utils";
 
 export const warehouses = pgTable(
 	"warehouse",
 	{
 		id: uuidPk("id"),
-
-		organizationId: uuid("organization_id")
-			.references(() => organizations.id, { onDelete: "cascade" })
+		organizationId: text("organization_id")
+			.references(() => organization.id, { onDelete: "cascade" })
 			.notNull(),
 		code: text("code").notNull(),
 		name: text("name").notNull(),

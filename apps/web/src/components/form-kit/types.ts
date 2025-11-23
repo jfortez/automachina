@@ -24,7 +24,7 @@ export type FieldKit<
 type MaybePromise<T> = T | Promise<T>;
 
 export type FormSubmitHandler<Z extends z.ZodObject<any>> = (
-	values: z.core.input<Z>,
+	values: z.infer<Z>,
 ) => MaybePromise<void>;
 
 //TODO: Omit "name" using Omit<T, "name"> causes a non controlable type error in `fieldProps`

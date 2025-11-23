@@ -12,8 +12,8 @@ import {
 	unique,
 	uuid,
 } from "drizzle-orm/pg-core";
+import { organization } from "./auth";
 import { handlingUnits } from "./handlingUnits";
-import { organizations } from "./organizations";
 import { product } from "./products";
 import { suppliers } from "./suppliers";
 import { uom } from "./uom";
@@ -53,9 +53,9 @@ export const inventoryLedger = pgTable(
 	"inventory_ledger",
 	{
 		id: bigserial("id", { mode: "number" }).primaryKey(),
-		organizationId: uuid("organization_id")
+		organizationId: text("organization_id")
 			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
+			.references(() => organization.id, { onDelete: "cascade" }),
 		occurredAt: timestamp("occurred_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -105,9 +105,9 @@ export const costLayer = pgTable(
 	"cost_layer",
 	{
 		id: bigserial("id", { mode: "number" }).primaryKey(),
-		organizationId: uuid("organization_id")
+		organizationId: text("organization_id")
 			.notNull()
-			.references(() => organizations.id, { onDelete: "cascade" }),
+			.references(() => organization.id, { onDelete: "cascade" }),
 		productId: uuid("product_id")
 			.notNull()
 			.references(() => product.id, { onDelete: "restrict" }),

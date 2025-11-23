@@ -26,6 +26,9 @@ export const productRouter = router({
 		}),
 	category: router({
 		getAll: publicProcedure.query(productServices.getAllProductCategories),
+		getAllByOrg: protectedProcedure.input(z.string()).query(({ input }) => {
+			return productServices.getAllProductCategoriesByOrg(input);
+		}),
 		getById: publicProcedure.input(z.string()).query(({ input }) => {
 			return productServices.getProductCategoryById(input);
 		}),

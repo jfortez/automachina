@@ -7,9 +7,8 @@ import {
 	timestamp,
 	uuid,
 } from "drizzle-orm/pg-core";
+import { organization } from "./auth";
 import { customers } from "./customer";
-
-import { organizations } from "./organizations";
 import { product } from "./products";
 import { suppliers } from "./suppliers";
 import { uom } from "./uom";
@@ -18,8 +17,8 @@ import { timestamps, uuidPk } from "./utils";
 // Invoice header - main invoice record
 export const invoice = pgTable("invoice", {
 	id: uuidPk("id"),
-	organizationId: uuid("organization_id")
-		.references(() => organizations.id, { onDelete: "cascade" })
+	organizationId: text("organization_id")
+		.references(() => organization.id, { onDelete: "cascade" })
 		.notNull(),
 
 	// Reference to source order

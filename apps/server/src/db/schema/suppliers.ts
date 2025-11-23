@@ -8,7 +8,7 @@ import {
 	unique,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { organizations } from "./organizations";
+import { organization } from "./auth";
 import { product } from "./products";
 import { uom } from "./uom";
 import { timestamps, uuidPk } from "./utils";
@@ -17,8 +17,8 @@ export const suppliers = pgTable(
 	"supplier",
 	{
 		id: uuidPk("id"),
-		organizationId: uuid("organization_id")
-			.references(() => organizations.id, { onDelete: "cascade" })
+		organizationId: text("organization_id")
+			.references(() => organization.id, { onDelete: "cascade" })
 			.notNull(),
 		code: text("code").notNull(),
 		name: text("name").notNull(),

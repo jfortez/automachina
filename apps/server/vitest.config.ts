@@ -7,6 +7,6 @@ export default defineConfig(() => ({
 		clearMocks: true,
 		globals: true,
 		setupFiles: ["dotenv/config"],
-		exclude: [],
+		exclude: ["dist", "node_modules"],
 	},
 }));

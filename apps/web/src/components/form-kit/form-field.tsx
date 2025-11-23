@@ -1,4 +1,10 @@
-import { CalendarIcon, CaseSensitiveIcon, Lock, Type } from "lucide-react";
+import {
+	CalendarIcon,
+	CaseSensitiveIcon,
+	Combine,
+	Lock,
+	Type,
+} from "lucide-react";
 import type React from "react";
 import Field, {
 	type BaseFieldProps,
@@ -15,11 +21,12 @@ import {
 } from "./form";
 import type { Components } from "./types";
 
-const defaultAddonIcons: Record<BaseFieldType, React.ReactNode> = {
+const defaultAddonIcons: Partial<Record<BaseFieldType, React.ReactNode>> = {
 	text: <Type />,
 	date: <CalendarIcon />,
 	password: <Lock />,
 	textarea: <CaseSensitiveIcon />,
+	select: <Combine />,
 };
 
 type BaseField = {

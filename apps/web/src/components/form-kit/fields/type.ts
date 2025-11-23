@@ -4,6 +4,7 @@ export type FieldAttributes = {
 	className: string;
 	"data-slot": string;
 	id: string;
+	placeholder?: string;
 	ref?: any;
 };
 

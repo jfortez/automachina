@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { organizations } from "@/db/schema/organizations";
+import { organization } from "@/db/schema/auth";
 import { locations, warehouses } from "@/db/schema/warehouse";
 import type {
 	CreateWarehouseInput,
@@ -22,7 +22,7 @@ const getWarehouseByOrg = async (orgId: string) => {
 	const warehousesByOrg = await db
 		.select()
 		.from(warehouses)
-		.innerJoin(organizations, eq(warehouses.organizationId, organizations.id))
+		.innerJoin(organization, eq(warehouses.organizationId, organization.id))
 		.where(eq(warehouses.organizationId, orgId));
 
 	if (!warehousesByOrg[0])
@@ -39,7 +39,7 @@ const getWarehouseLocationsByOrg = async (orgId: string) => {
 		.select()
 		.from(locations)
 		.innerJoin(warehouses, eq(locations.warehouseId, warehouses.id))
-		.innerJoin(organizations, eq(warehouses.organizationId, organizations.id))
+		.innerJoin(organization, eq(warehouses.organizationId, organization.id))
 		.where(eq(warehouses.organizationId, orgId));
 	return warehouseLocationsByOrg;
 };

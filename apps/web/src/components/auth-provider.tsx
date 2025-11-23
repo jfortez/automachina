@@ -1,9 +1,10 @@
 import { createContext, useContext, useMemo } from "react";
 
-import { type User, useSession } from "@/lib/auth-client";
+import { type Session, type User, useSession } from "@/lib/auth-client";
 
 export type AuthContext = {
 	user: User | null;
+	session: Session | null;
 	isAuthenticated: boolean;
 	isPending: boolean;
 };
@@ -26,6 +27,7 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
 	const value = useMemo<AuthContext>(() => {
 		return {
 			user: data?.user || null,
+			session: data?.session || null,
 			isAuthenticated: !isPending && !!data,
 			isPending,
 		};

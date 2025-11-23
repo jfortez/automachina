@@ -7,14 +7,14 @@ import {
 	text,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { organizations } from "./organizations";
+import { organization } from "./auth";
 import { timestamps, uuidPk } from "./utils";
 
 // Organization-level settings for taxes, discounts, and business rules
 export const organizationSettings = pgTable("organization_settings", {
 	id: uuidPk("id"),
-	organizationId: uuid("organization_id")
-		.references(() => organizations.id, { onDelete: "cascade" })
+	organizationId: text("organization_id")
+		.references(() => organization.id, { onDelete: "cascade" })
 		.notNull(),
 
 	// Tax Settings
@@ -59,8 +59,8 @@ export const organizationSettings = pgTable("organization_settings", {
 // Tax rules by region/organization
 export const taxRule = pgTable("tax_rule", {
 	id: uuidPk("id"),
-	organizationId: uuid("organization_id")
-		.references(() => organizations.id, { onDelete: "cascade" })
+	organizationId: text("organization_id")
+		.references(() => organization.id, { onDelete: "cascade" })
 		.notNull(),
 
 	code: text("code").notNull(), // e.g., "IVA", "VAT", "SALES_TAX"
@@ -89,8 +89,8 @@ export const taxRule = pgTable("tax_rule", {
 // Invoice sequence numbering
 export const invoiceSequence = pgTable("invoice_sequence", {
 	id: uuidPk("id"),
-	organizationId: uuid("organization_id")
-		.references(() => organizations.id, { onDelete: "cascade" })
+	organizationId: text("organization_id")
+		.references(() => organization.id, { onDelete: "cascade" })
 		.notNull(),
 
 	year: integer("year").notNull(), // Calendar year

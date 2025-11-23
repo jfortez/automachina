@@ -1,7 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
-
+import type z from "zod";
 import { db } from "@/db";
+import { organization } from "@/db/schema/auth";
 import { inventoryLedger } from "@/db/schema/inventory";
 import {
 	priceList,
@@ -225,6 +226,22 @@ const createProduct = async (d: CreateProductInput) => {
 
 const getAllProductCategories = async () => {
 	return await db.query.productCategory.findMany();
+};
+
+export const getAllProductCategoriesByOrg = async (orgId: string) => {
+	const org = await db.query.organization.findFirst({
+		where: eq(organization.id, orgId),
+	});
+	if (!org) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Organization not found",
+		});
+	}
+
+	return await db.query.productCategory.findMany({
+		where: eq(productCategory.organizationId, orgId),
+	});
 };
 
 const getProductCategoryById = async (id: string) => {

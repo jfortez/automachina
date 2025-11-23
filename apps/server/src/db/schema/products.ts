@@ -13,8 +13,8 @@ import {
 	unique,
 	uuid,
 } from "drizzle-orm/pg-core";
+import { organization } from "./auth";
 import { customers } from "./customer";
-import { organizations } from "./organizations";
 import { uom } from "./uom";
 import { timestamps, uuidPk } from "./utils";
 
@@ -23,8 +23,8 @@ export const productCategory = pgTable(
 	"product_category",
 	{
 		id: uuidPk("id"),
-		organizationId: uuid("organization_id")
-			.references(() => organizations.id, { onDelete: "cascade" })
+		organizationId: text("organization_id")
+			.references(() => organization.id, { onDelete: "cascade" })
 			.notNull(),
 		code: text("code").notNull(),
 		name: text("name").notNull(),
@@ -38,8 +38,8 @@ export const product = pgTable(
 	"product",
 	{
 		id: uuidPk("id"),
-		organizationId: uuid("organization_id")
-			.references(() => organizations.id, { onDelete: "cascade" })
+		organizationId: text("organization_id")
+			.references(() => organization.id, { onDelete: "cascade" })
 			.notNull(),
 		sku: text("sku").notNull(),
 		name: text("name").notNull(),
@@ -82,9 +82,9 @@ export const productRelations = relations(product, ({ one, many }) => ({
 		references: [productCategory.id],
 	}),
 	images: many(productImages),
-	organization: one(organizations, {
+	organization: one(organization, {
 		fields: [product.organizationId],
-		references: [organizations.id],
+		references: [organization.id],
 	}),
 	productFamily: one(productFamily, {
 		fields: [product.productFamilyId],
@@ -98,7 +98,7 @@ export const productRelations = relations(product, ({ one, many }) => ({
 export const productCategoryRelations = relations(
 	productCategory,
 	({ one, many }) => ({
-		organization: one(organizations),
+		organization: one(organization),
 		products: many(product),
 	}),
 );
@@ -169,8 +169,8 @@ export const productFamily = pgTable(
 	"product_family",
 	{
 		id: uuidPk("id"),
-		organizationId: uuid("organization_id")
-			.references(() => organizations.id, { onDelete: "cascade" })
+		organizationId: text("organization_id")
+			.references(() => organization.id, { onDelete: "cascade" })
 			.notNull(),
 		code: text("code"),
 		name: text("name").notNull(),
@@ -185,8 +185,8 @@ export const priceList = pgTable(
 	"price_list",
 	{
 		id: uuidPk("id"),
-		organizationId: uuid("organization_id")
-			.references(() => organizations.id, { onDelete: "cascade" })
+		organizationId: text("organization_id")
+			.references(() => organization.id, { onDelete: "cascade" })
 			.notNull(),
 		code: text("code").notNull(),
 		name: text("name").notNull(),
@@ -240,8 +240,8 @@ export const discountRule = pgTable(
 	"discount_rule",
 	{
 		id: uuidPk("id"),
-		organizationId: uuid("organization_id")
-			.references(() => organizations.id, { onDelete: "cascade" })
+		organizationId: text("organization_id")
+			.references(() => organization.id, { onDelete: "cascade" })
 			.notNull(),
 		code: text("code").notNull(),
 		name: text("name").notNull(),
@@ -275,9 +275,9 @@ export const discountRule = pgTable(
 export const productFamilyRelations = relations(
 	productFamily,
 	({ one, many }) => ({
-		organization: one(organizations, {
+		organization: one(organization, {
 			fields: [productFamily.organizationId],
-			references: [organizations.id],
+			references: [organization.id],
 		}),
 		products: many(product),
 		images: many(productImages),
@@ -321,9 +321,9 @@ export const productUomRelations = relations(productUom, ({ one }) => ({
 }));
 
 export const priceListRelations = relations(priceList, ({ one, many }) => ({
-	organization: one(organizations, {
+	organization: one(organization, {
 		fields: [priceList.organizationId],
-		references: [organizations.id],
+		references: [organization.id],
 	}),
 	prices: many(productPrice),
 }));
@@ -348,8 +348,8 @@ export const productPriceRelations = relations(productPrice, ({ one }) => ({
 }));
 
 export const discountRuleRelations = relations(discountRule, ({ one }) => ({
-	organization: one(organizations, {
+	organization: one(organization, {
 		fields: [discountRule.organizationId],
-		references: [organizations.id],
+		references: [organization.id],
 	}),
 }));

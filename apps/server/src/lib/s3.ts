@@ -16,9 +16,7 @@ export const s3 = new S3Client({
 });
 
 export const createBucket = async (bucket: string) => {
-	try {
-		await s3.send(new CreateBucketCommand({ Bucket: bucket }));
-	} catch {}
+	return await s3.send(new CreateBucketCommand({ Bucket: bucket }));
 };
 
 export const findBucket = async (bucket: string) => {

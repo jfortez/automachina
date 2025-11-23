@@ -12,7 +12,6 @@ import { orderRouter } from "./order";
 import { orgRouter } from "./organization";
 import { productRouter } from "./product";
 import { supplierRouter } from "./supplier";
-import { todoRouter } from "./todo";
 import { uomRouter } from "./uom";
 import { warehouseRouter } from "./warehouse";
 
@@ -26,7 +25,6 @@ export const appRouter = router({
 			user: ctx.session.user,
 		};
 	}),
-	todo: todoRouter,
 	warehouse: warehouseRouter,
 	organization: orgRouter,
 	supplier: supplierRouter,

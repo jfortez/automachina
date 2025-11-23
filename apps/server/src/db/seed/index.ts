@@ -5,7 +5,6 @@ import ora from "ora";
 import { v4 as uuid } from "uuid";
 import { auth } from "@/lib/auth";
 import { env } from "@/lib/env";
-import * as orgSchema from "../schema/organizations";
 import * as productSchema from "../schema/products";
 import * as uomSchema from "../schema/uom";
 import * as warehouseSchema from "../schema/warehouse";
@@ -40,36 +39,26 @@ async function main() {
 
 		spinner.text = "Seeding Organizations";
 
-		const ORGANIZATIONS: (typeof orgSchema.organizations.$inferInsert)[] = [
-			{
-				id: UNIQUE_ID,
-				code: "public",
-				name: "Sample Organization",
-				description: "Sample Description",
+		const organization = await auth.api.createOrganization({
+			body: {
+				name: "PUBLIC ORGANIZATION",
+				slug: "public-organization",
+				userId: userIds[0],
+				keepCurrentActiveOrganization: true,
 			},
-		];
+		});
 
 		spinner.succeed("Organizations seeded");
 
-		const [organization] = await db
-			.insert(orgSchema.organizations)
-			.values(ORGANIZATIONS)
-			.returning();
-
 		spinner.text = "Seeding Organization Members";
 
-		const ORGANIZATION_MEMBERS: (typeof orgSchema.orgMembers.$inferInsert)[] = [
-			{
-				organizationId: organization.id,
-				userId: userIds[0],
-			},
-			{
-				organizationId: organization.id,
+		const orgMember1 = await auth.api.addMember({
+			body: {
 				userId: userIds[1],
+				role: ["member"], // required
+				organizationId: organization!.id,
 			},
-		];
-
-		await db.insert(orgSchema.orgMembers).values(ORGANIZATION_MEMBERS);
+		});
 
 		spinner.succeed("Organization Members seeded");
 
@@ -82,7 +71,7 @@ async function main() {
 					id: UNIQUE_ID,
 					code: "public",
 					name: "Public Warehouse",
-					organizationId: organization.id,
+					organizationId: organization!.id,
 					address: "Public Address Warehouse",
 				},
 			])
@@ -103,7 +92,7 @@ async function main() {
 			id: UNIQUE_ID,
 			code: "public",
 			name: "Public Price List",
-			organizationId: organization.id,
+			organizationId: organization!.id,
 			type: "public",
 			currency: "USD",
 		});
@@ -118,7 +107,7 @@ async function main() {
 				id: UNIQUE_ID,
 				code: "public",
 				name: "Public Category",
-				organizationId: organization.id,
+				organizationId: organization!.id,
 				description: "Public Category for Products",
 			})
 			.returning();
@@ -127,7 +116,7 @@ async function main() {
 			id: UNIQUE_ID,
 			organization,
 			warehouse,
-			orgMembers: ORGANIZATION_MEMBERS,
+			orgMembers: [organization?.members[0], orgMember1],
 			productCategory: publicCategory,
 		};
 

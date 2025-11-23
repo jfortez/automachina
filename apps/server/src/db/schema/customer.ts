@@ -1,14 +1,14 @@
 import { sql } from "drizzle-orm";
 import { jsonb, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
-import { organizations } from "./organizations";
+import { organization } from "./auth";
 import { uuidPk } from "./utils";
 
 export const customers = pgTable(
 	"customer",
 	{
 		id: uuidPk("id"),
-		organizationId: uuid("organization_id")
-			.references(() => organizations.id)
+		organizationId: text("organization_id")
+			.references(() => organization.id)
 			.notNull(),
 		code: text("code").notNull(),
 		name: text("name").notNull(),

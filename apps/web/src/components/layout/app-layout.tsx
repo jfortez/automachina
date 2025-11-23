@@ -6,7 +6,7 @@ const AppLayout = () => {
 	const { isPending } = useAuth();
 	if (isPending) return <DefaultLoader />;
 	return (
-		<div className="h-dvh bg-background">
+		<div className="min-h-dvh bg-background">
 			<Outlet />
 		</div>
 	);

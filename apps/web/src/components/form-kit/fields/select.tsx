@@ -1,73 +1,125 @@
+import { nanoid } from "nanoid";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Virtualizer, type VirtualizerHandle } from "virtua";
 import {
 	Select,
 	SelectContent,
 	SelectGroup,
 	SelectItem,
 	SelectLabel,
+	SelectSeparator,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { withQuery } from "@/components/withTQuery";
+import { cn } from "@/lib/utils";
+import { useFieldContext } from "../form";
+import type { FieldProps } from "./type";
 
-export const SelectField = () => {
-	return (
-		<Select>
-			<SelectTrigger className="w-[280px]">
-				<SelectValue placeholder="Select a timezone" />
-			</SelectTrigger>
-			<SelectContent>
-				<SelectGroup>
-					<SelectLabel>North America</SelectLabel>
-					<SelectItem value="est">Eastern Standard Time (EST)</SelectItem>
-					<SelectItem value="cst">Central Standard Time (CST)</SelectItem>
-					<SelectItem value="mst">Mountain Standard Time (MST)</SelectItem>
-					<SelectItem value="pst">Pacific Standard Time (PST)</SelectItem>
-					<SelectItem value="akst">Alaska Standard Time (AKST)</SelectItem>
-					<SelectItem value="hst">Hawaii Standard Time (HST)</SelectItem>
-				</SelectGroup>
-				<SelectGroup>
-					<SelectLabel>Europe & Africa</SelectLabel>
-					<SelectItem value="gmt">Greenwich Mean Time (GMT)</SelectItem>
-					<SelectItem value="cet">Central European Time (CET)</SelectItem>
-					<SelectItem value="eet">Eastern European Time (EET)</SelectItem>
-					<SelectItem value="west">
-						Western European Summer Time (WEST)
-					</SelectItem>
-					<SelectItem value="cat">Central Africa Time (CAT)</SelectItem>
-					<SelectItem value="eat">East Africa Time (EAT)</SelectItem>
-				</SelectGroup>
-				<SelectGroup>
-					<SelectLabel>Asia</SelectLabel>
-					<SelectItem value="msk">Moscow Time (MSK)</SelectItem>
-					<SelectItem value="ist">India Standard Time (IST)</SelectItem>
-					<SelectItem value="cst_china">China Standard Time (CST)</SelectItem>
-					<SelectItem value="jst">Japan Standard Time (JST)</SelectItem>
-					<SelectItem value="kst">Korea Standard Time (KST)</SelectItem>
-					<SelectItem value="ist_indonesia">
-						Indonesia Central Standard Time (WITA)
-					</SelectItem>
-				</SelectGroup>
-				<SelectGroup>
-					<SelectLabel>Australia & Pacific</SelectLabel>
-					<SelectItem value="awst">
-						Australian Western Standard Time (AWST)
-					</SelectItem>
-					<SelectItem value="acst">
-						Australian Central Standard Time (ACST)
-					</SelectItem>
-					<SelectItem value="aest">
-						Australian Eastern Standard Time (AEST)
-					</SelectItem>
-					<SelectItem value="nzst">New Zealand Standard Time (NZST)</SelectItem>
-					<SelectItem value="fjt">Fiji Time (FJT)</SelectItem>
-				</SelectGroup>
-				<SelectGroup>
-					<SelectLabel>South America</SelectLabel>
-					<SelectItem value="art">Argentina Time (ART)</SelectItem>
-					<SelectItem value="bot">Bolivia Time (BOT)</SelectItem>
-					<SelectItem value="brt">Brasilia Time (BRT)</SelectItem>
-					<SelectItem value="clt">Chile Standard Time (CLT)</SelectItem>
-				</SelectGroup>
-			</SelectContent>
-		</Select>
-	);
+type Field = {
+	text: string;
+	value: string;
 };
+
+type SelectProps<TData = Record<string, unknown>> = {
+	selectLabel?: string;
+	itemTemplate?: (item: TData) => React.ReactNode;
+	field: Field;
+};
+
+const SelectField = withQuery<
+	FieldProps<SelectProps>,
+	any,
+	Record<string, unknown>[]
+>(
+	({
+		placeholder = "Select a Value",
+		data,
+		selectLabel,
+		field,
+		itemTemplate,
+		className,
+		...props
+	}) => {
+		const [open, setOpen] = useState(false);
+		const fieldCtx = useFieldContext<string>();
+		const virtuaRef = useRef<VirtualizerHandle>(null);
+		const uniqueIds = useMemo(() => {
+			const map = new Map<string, unknown>();
+			for (let i = 0; i < data?.length; i++) {
+				const item = data[i];
+				map.set(nanoid(), item);
+			}
+			return map;
+		}, []);
+
+		const index = useMemo(() => {
+			return data?.findIndex(
+				(item) => String(item[field.value]) === String(fieldCtx.state.value),
+			);
+		}, [fieldCtx.state.value]);
+
+		const onValuechange = (value: string) => {
+			fieldCtx.handleChange(value);
+		};
+
+		useLayoutEffect(() => {
+			if (!open || !fieldCtx.state.value) return;
+			if (index === -1) return;
+			virtuaRef.current?.scrollToIndex(index);
+
+			const timer = setTimeout(() => {
+				const checkedElement = document.querySelector(
+					"[data-slot='select-item'][data-state='checked']",
+				) as HTMLElement;
+				if (checkedElement)
+					checkedElement.focus({
+						preventScroll: true,
+					});
+			}, 100);
+
+			return () => clearTimeout(timer);
+		}, [open]);
+
+		return (
+			<Select
+				value={fieldCtx.state.value}
+				onValueChange={onValuechange}
+				open={open}
+				onOpenChange={setOpen}
+			>
+				<SelectTrigger className={cn("w-full", className)} {...props}>
+					<SelectValue placeholder={placeholder} />
+				</SelectTrigger>
+				<SelectContent className="max-h-64">
+					<SelectGroup>
+						{selectLabel && (
+							<>
+								<SelectLabel>{selectLabel}</SelectLabel>
+								<SelectSeparator />
+							</>
+						)}
+						<Virtualizer
+							ref={virtuaRef}
+							keepMounted={index !== -1 ? [index] : undefined}
+							bufferSize={20}
+						>
+							{data?.map((item, index) => {
+								const valueFieldMap = item[field.value] as string | number;
+								return (
+									<SelectItem key={valueFieldMap} value={String(valueFieldMap)}>
+										{itemTemplate
+											? itemTemplate(item)
+											: String(item[field.text])}
+									</SelectItem>
+								);
+							})}
+						</Virtualizer>
+					</SelectGroup>
+				</SelectContent>
+			</Select>
+		);
+	},
+);
+
+export default SelectField;

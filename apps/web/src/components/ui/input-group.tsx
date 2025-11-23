@@ -28,6 +28,8 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 				// Error state.
 				"has-[[data-slot][aria-invalid=true]]:border-destructive has-[[data-slot][aria-invalid=true]]:ring-destructive/20 dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40",
 
+				"has-[[data-slot=input-group-control][role=combobox]]:dark:hover:bg-input/50 has-[[data-slot=input-group-control][role=combobox]]:[&>*]:cursor-pointer has-[[data-slot=input-group-control][role=combobox]]:dark:hover:[&>*]:bg-input/50",
+
 				className,
 			)}
 			{...props}
@@ -36,7 +38,7 @@ function InputGroup({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 const inputGroupAddonVariants = cva(
-	"flex h-auto cursor-text select-none items-center justify-center gap-2 py-1.5 font-medium text-muted-foreground text-sm group-data-[disabled=true]/input-group:opacity-50 [&>kbd]:rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-4",
+	"flex h-auto h-full cursor-text select-none items-center justify-center gap-2 py-1.5 font-medium text-muted-foreground text-sm group-data-[disabled=true]/input-group:opacity-50 [&>kbd]:rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			align: {
@@ -68,6 +70,7 @@ function InputGroupAddon({
 			data-align={align}
 			className={cn(inputGroupAddonVariants({ align }), className)}
 			onClick={(e) => {
+				console.log(e.target);
 				if ((e.target as HTMLElement).closest("button")) {
 					return;
 				}

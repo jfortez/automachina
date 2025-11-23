@@ -18,15 +18,15 @@ describe("Testing organization", () => {
 
 	it("should create organization with all defaults", async () => {
 		const orgInput: inferProcedureInput<AppRouter["organization"]["create"]> = {
-			code: nanoid(10),
+			code: nanoid(5).toLowerCase(),
 			name: "Test Organization for Defaults",
 			description: "Organization created to test default data creation",
 		};
 
 		const createdOrg = await ctx.caller.organization.create(orgInput);
 
-		expect(createdOrg).toHaveLength(1);
-		const orgId = createdOrg[0].id;
+		expect(createdOrg).toBeDefined();
+		const orgId = createdOrg!.id;
 
 		// Verify warehouse was created
 		const warehouseResult = await db
@@ -71,9 +71,9 @@ describe("Testing organization", () => {
 		expect(categoryResult[0].name).toBe("General");
 		expect(categoryResult[0].description).toBe("Default general category");
 
-		const orgBucket = await findBucket(`org-${orgId}`);
+		const orgBucket = await findBucket(`org-${createdOrg!.slug}`);
 
 		expect(orgBucket).toBeTruthy();
-		expect(orgBucket?.Name).toBe(`org-${orgId}`);
+		expect(orgBucket?.Name).toBe(`org-${createdOrg!.slug}`);
 	});
 });

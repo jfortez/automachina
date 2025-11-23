@@ -14,7 +14,6 @@ import type {
 } from "./types";
 import { generateGrid, parseFields } from "./util";
 import { ZodProvider } from "./zod";
-
 export type { FieldKit };
 
 type FormProps<Z extends z.ZodObject<any>, C extends Components> = {
@@ -66,7 +65,7 @@ export const FormKit = <
 			onSubmit: schema,
 		},
 		onSubmit: async (submitValues) => {
-			await onSubmit?.(submitValues.value);
+			await onSubmit?.(submitValues.value as z.input<any>);
 		},
 	});
 

@@ -7,10 +7,10 @@ import {
 	unique,
 	uuid,
 } from "drizzle-orm/pg-core";
+import { organization } from "./auth";
 import { customers } from "./customer";
 import { handlingUnits } from "./handlingUnits";
 import { batches } from "./inventory";
-import { organizations } from "./organizations";
 import { product } from "./products";
 import { suppliers } from "./suppliers";
 import { uom } from "./uom";
@@ -22,8 +22,8 @@ export const purchaseOrders = pgTable(
 	"purchase_order",
 	{
 		id: uuidPk("id"),
-		organizationId: uuid("organization_id")
-			.references(() => organizations.id)
+		organizationId: text("organization_id")
+			.references(() => organization.id)
 			.notNull(),
 		supplierId: uuid("supplier_id")
 			.references(() => suppliers.id)
@@ -72,8 +72,8 @@ export const salesOrders = pgTable(
 	"sales_order",
 	{
 		id: uuidPk("id"),
-		organizationId: uuid("organization_id")
-			.references(() => organizations.id)
+		organizationId: text("organization_id")
+			.references(() => organization.id)
 			.notNull(),
 		customerId: uuid("customer_id")
 			.references(() => customers.id)
@@ -117,8 +117,8 @@ export const salesOrderLines = pgTable("sales_order_line", {
 
 export const inventoryReservations = pgTable("inventory_reservation", {
 	id: uuidPk("id"),
-	organizationId: uuid("organization_id")
-		.references(() => organizations.id)
+	organizationId: text("organization_id")
+		.references(() => organization.id)
 		.notNull(),
 	salesOrderLineId: uuid("sales_order_line_id").references(
 		() => salesOrderLines.id,
@@ -138,9 +138,9 @@ export const inventoryReservations = pgTable("inventory_reservation", {
 export const purchaseOrdersRelations = relations(
 	purchaseOrders,
 	({ one, many }) => ({
-		organization: one(organizations, {
+		organization: one(organization, {
 			fields: [purchaseOrders.organizationId],
-			references: [organizations.id],
+			references: [organization.id],
 		}),
 		supplier: one(suppliers, {
 			fields: [purchaseOrders.supplierId],
@@ -173,9 +173,9 @@ export const purchaseOrderLinesRelations = relations(
 );
 
 export const salesOrdersRelations = relations(salesOrders, ({ one, many }) => ({
-	organization: one(organizations, {
+	organization: one(organization, {
 		fields: [salesOrders.organizationId],
-		references: [organizations.id],
+		references: [organization.id],
 	}),
 	customer: one(customers, {
 		fields: [salesOrders.customerId],

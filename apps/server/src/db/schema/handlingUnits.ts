@@ -11,8 +11,8 @@ import {
 	unique,
 	uuid,
 } from "drizzle-orm/pg-core";
+import { organization } from "./auth";
 import { batches } from "./inventory";
-import { organizations } from "./organizations";
 import { product } from "./products";
 import { uom } from "./uom";
 import { uuidPk } from "./utils";
@@ -22,8 +22,8 @@ export const handlingUnits = pgTable(
 	"handling_unit",
 	{
 		id: uuidPk("id"),
-		organizationId: uuid("organization_id")
-			.references(() => organizations.id, { onDelete: "cascade" })
+		organizationId: text("organization_id")
+			.references(() => organization.id, { onDelete: "cascade" })
 			.notNull(),
 		parentId: uuid("parent_id").references(
 			(): AnyPgColumn => handlingUnits.id,
