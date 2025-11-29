@@ -27,6 +27,7 @@ const defaultAddonIcons: Partial<Record<BaseFieldType, React.ReactNode>> = {
 	password: <Lock />,
 	textarea: <CaseSensitiveIcon />,
 	select: <Combine />,
+	number: <Type />,
 };
 
 type BaseField = {
@@ -67,7 +68,7 @@ const FormField = <C extends Components | undefined = undefined>({
 					metadata.element
 				) : (
 					<Field
-						inputType={metadata.type as unknown as any}
+						inputType={metadata.type}
 						showAddonIcon={showAddonIcon}
 						addonIcon={addonIcon}
 						{...metadata.fieldProps}

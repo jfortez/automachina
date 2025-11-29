@@ -18,6 +18,7 @@ export const {
 	signOut,
 	forgetPassword,
 	resetPassword,
+	useActiveOrganization,
 } = authClient;
 
 export type Session = typeof authClient.$Infer.Session.session;

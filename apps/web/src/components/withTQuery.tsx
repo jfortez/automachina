@@ -23,11 +23,13 @@ type NoGenericProvided = { __brand: "NoGenericProvided" };
 const noop = () => {
 	return undefined;
 };
+
 const noopQO = queryOptions({
 	queryFn: noop,
 	queryKey: ["noop"],
 	enabled: false,
 });
+
 export const withQuery = <
 	P extends object = object,
 	TQueryOptionsOrFnOrData extends
@@ -89,3 +91,5 @@ export const withQuery = <
 	ComponentWithQuery.displayName = `withQuery(${Component.displayName || Component.name})`;
 	return ComponentWithQuery;
 };
+
+// export const withQuery: <P,TQ,D>(c: React.ComponentType<P & { data: D }>) => React.ComponentType<P & { data: D }> = _withQuery;

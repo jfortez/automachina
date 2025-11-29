@@ -16,7 +16,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthOverviewRouteImport } from './routes/_auth/overview'
 import { Route as AuthProfileIndexRouteImport } from './routes/_auth/profile/index'
 import { Route as AuthProductsIndexRouteImport } from './routes/_auth/products/index'
+import { Route as AuthInvoiceIndexRouteImport } from './routes/_auth/invoice/index'
+import { Route as AuthInventoryIndexRouteImport } from './routes/_auth/inventory/index'
 import { Route as AuthDashboardIndexRouteImport } from './routes/_auth/dashboard/index'
+import { Route as AuthCustomerIndexRouteImport } from './routes/_auth/customer/index'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -52,9 +55,24 @@ const AuthProductsIndexRoute = AuthProductsIndexRouteImport.update({
   path: '/products/',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthInvoiceIndexRoute = AuthInvoiceIndexRouteImport.update({
+  id: '/invoice/',
+  path: '/invoice/',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthInventoryIndexRoute = AuthInventoryIndexRouteImport.update({
+  id: '/inventory/',
+  path: '/inventory/',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthDashboardIndexRoute = AuthDashboardIndexRouteImport.update({
   id: '/dashboard/',
   path: '/dashboard/',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthCustomerIndexRoute = AuthCustomerIndexRouteImport.update({
+  id: '/customer/',
+  path: '/customer/',
   getParentRoute: () => AuthRoute,
 } as any)
 
@@ -63,7 +81,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/overview': typeof AuthOverviewRoute
+  '/customer': typeof AuthCustomerIndexRoute
   '/dashboard': typeof AuthDashboardIndexRoute
+  '/inventory': typeof AuthInventoryIndexRoute
+  '/invoice': typeof AuthInvoiceIndexRoute
   '/products': typeof AuthProductsIndexRoute
   '/profile': typeof AuthProfileIndexRoute
 }
@@ -72,7 +93,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/overview': typeof AuthOverviewRoute
+  '/customer': typeof AuthCustomerIndexRoute
   '/dashboard': typeof AuthDashboardIndexRoute
+  '/inventory': typeof AuthInventoryIndexRoute
+  '/invoice': typeof AuthInvoiceIndexRoute
   '/products': typeof AuthProductsIndexRoute
   '/profile': typeof AuthProfileIndexRoute
 }
@@ -83,7 +107,10 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/_auth/overview': typeof AuthOverviewRoute
+  '/_auth/customer/': typeof AuthCustomerIndexRoute
   '/_auth/dashboard/': typeof AuthDashboardIndexRoute
+  '/_auth/inventory/': typeof AuthInventoryIndexRoute
+  '/_auth/invoice/': typeof AuthInvoiceIndexRoute
   '/_auth/products/': typeof AuthProductsIndexRoute
   '/_auth/profile/': typeof AuthProfileIndexRoute
 }
@@ -94,7 +121,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/overview'
+    | '/customer'
     | '/dashboard'
+    | '/inventory'
+    | '/invoice'
     | '/products'
     | '/profile'
   fileRoutesByTo: FileRoutesByTo
@@ -103,7 +133,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/overview'
+    | '/customer'
     | '/dashboard'
+    | '/inventory'
+    | '/invoice'
     | '/products'
     | '/profile'
   id:
@@ -113,7 +146,10 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/_auth/overview'
+    | '/_auth/customer/'
     | '/_auth/dashboard/'
+    | '/_auth/inventory/'
+    | '/_auth/invoice/'
     | '/_auth/products/'
     | '/_auth/profile/'
   fileRoutesById: FileRoutesById
@@ -176,6 +212,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthProductsIndexRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/invoice/': {
+      id: '/_auth/invoice/'
+      path: '/invoice'
+      fullPath: '/invoice'
+      preLoaderRoute: typeof AuthInvoiceIndexRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/inventory/': {
+      id: '/_auth/inventory/'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof AuthInventoryIndexRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/dashboard/': {
       id: '/_auth/dashboard/'
       path: '/dashboard'
@@ -183,19 +233,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthDashboardIndexRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/customer/': {
+      id: '/_auth/customer/'
+      path: '/customer'
+      fullPath: '/customer'
+      preLoaderRoute: typeof AuthCustomerIndexRouteImport
+      parentRoute: typeof AuthRoute
+    }
   }
 }
 
 interface AuthRouteChildren {
   AuthOverviewRoute: typeof AuthOverviewRoute
+  AuthCustomerIndexRoute: typeof AuthCustomerIndexRoute
   AuthDashboardIndexRoute: typeof AuthDashboardIndexRoute
+  AuthInventoryIndexRoute: typeof AuthInventoryIndexRoute
+  AuthInvoiceIndexRoute: typeof AuthInvoiceIndexRoute
   AuthProductsIndexRoute: typeof AuthProductsIndexRoute
   AuthProfileIndexRoute: typeof AuthProfileIndexRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthOverviewRoute: AuthOverviewRoute,
+  AuthCustomerIndexRoute: AuthCustomerIndexRoute,
   AuthDashboardIndexRoute: AuthDashboardIndexRoute,
+  AuthInventoryIndexRoute: AuthInventoryIndexRoute,
+  AuthInvoiceIndexRoute: AuthInvoiceIndexRoute,
   AuthProductsIndexRoute: AuthProductsIndexRoute,
   AuthProfileIndexRoute: AuthProfileIndexRoute,
 }

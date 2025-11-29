@@ -69,6 +69,7 @@ const getProductIdentifiers = async () => {
 };
 
 const createProduct = async (d: CreateProductInput) => {
+	console.log(d);
 	return await db.transaction(async (tx) => {
 		// Validate base UoM exists in uom table
 		const [baseUom] = await tx

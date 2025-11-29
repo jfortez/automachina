@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: <explanation> */
 import { useMemo } from "react";
 
 import type { z } from "zod";
