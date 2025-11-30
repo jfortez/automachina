@@ -8,16 +8,16 @@ import { trpc } from "@/lib/trpc";
 
 const hoc = productSheet.hoc;
 
-// const productPrice = z.object({
-//   priceListId: z.string().optional(), // Link to priceList (e.g., 'public' or 'wholesale')
-//   customerId: z.string().optional(), // Customer-specific pricing
-//   uomCode: z.string().min(1),
-//   price: z.number().min(0),
-//   currency: z.string().default("USD"),
-//   minQty: z.number().positive().default(1),
-//   effectiveFrom: z.date().optional(),
-//   effectiveTo: z.date().optional(),
-// });
+const productPrice = z.object({
+	priceListId: z.string().optional(), // Link to priceList (e.g., 'public' or 'wholesale')
+	customerId: z.string().optional(), // Customer-specific pricing
+	uomCode: z.string().min(1),
+	price: z.number().min(0),
+	currency: z.string().default("USD"),
+	minQty: z.number().positive().default(1),
+	effectiveFrom: z.date().optional(),
+	effectiveTo: z.date().optional(),
+});
 
 const formSchema = z.object({
 	organizationId: z.string().optional(), // Injected on submit
@@ -39,7 +39,7 @@ const formSchema = z.object({
 	suggestedRetailPrice: z.string().optional(), // Base suggested price (in base UoM)
 	defaultCost: z.string().optional(),
 	defaultCurrency: z.string().default("USD"),
-	// prices: z.array(productPrice).optional().default([]),
+	prices: z.array(productPrice).optional().default([]),
 	// identifiers: z.array(productIdentifier).optional(), // For external IDs, useful for packages in CASE 2
 });
 
@@ -190,9 +190,7 @@ const ProductForm = hoc(({ close }) => {
 	};
 	return (
 		<FormKit
-			schema={formSchema}
-			fields={fields}
-			onSubmit={handleSubmit}
+			schema={formSchema} /* fields={fields} onSubmit={handleSubmit}  */
 			showSubmit
 		/>
 	);

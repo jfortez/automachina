@@ -1,9 +1,10 @@
 import { createContext, useContext } from "react";
-import type { Components, ParsedSchema } from "./types";
+import type { Components } from "./types";
+import type { InternalField } from "./util";
 
 type IFormContext<C extends Components = Components> = {
 	components?: C;
-	schema: ParsedSchema;
+	schema: InternalField[];
 };
 
 const FormKitProvider = createContext<IFormContext>({} as IFormContext);

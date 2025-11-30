@@ -17,5 +17,5 @@ export function inferFieldType(
 	if (schema instanceof z.$ZodEnum) return "select";
 	if (schema instanceof z.$ZodArray) return "array";
 
-	return "string"; // Default to string for unknown types
+	return "string";
 }
