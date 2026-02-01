@@ -24,7 +24,8 @@
 		"db:watch": "turbo -F server db:watch",
 		"db:stop": "turbo -F server db:stop",
 		"db:down": "turbo -F server db:down",
-		"db:seed": "turbo -F server db:seed"
+		"db:seed": "turbo -F server db:seed",
+		"test:server": "turbo -F server test"
 	},
 	"dependencies": {},
 	"devDependencies": {
