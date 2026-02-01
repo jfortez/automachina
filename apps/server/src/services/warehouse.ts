@@ -44,8 +44,14 @@ const getWarehouseLocationsByOrg = async (orgId: string) => {
 	return warehouseLocationsByOrg;
 };
 
-const createWarehouse = async (data: CreateWarehouseInput) => {
-	const newWarehouse = await db.insert(warehouses).values(data).returning();
+const createWarehouse = async (
+	data: CreateWarehouseInput,
+	organizationId: string,
+) => {
+	const newWarehouse = await db
+		.insert(warehouses)
+		.values({ ...data, organizationId })
+		.returning();
 	return newWarehouse;
 };
 

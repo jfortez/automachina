@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_auth/dashboard/")({
 });
 
 function RouteComponent() {
-	const privateData = useQuery(trpc.privateData.queryOptions());
+	const privateData = useQuery(trpc.profile.queryOptions());
 
 	return (
 		<div>

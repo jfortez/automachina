@@ -13,21 +13,21 @@ export const productRouter = router({
 	getById: publicProcedure.input(z.string()).query(({ input }) => {
 		return productServices.getProductById(input);
 	}),
-	getByOrg: protectedProcedure.input(z.string()).query(({ input }) => {
-		return productServices.getProductsByOrg(input);
+	getByOrg: protectedProcedure.query(({ ctx }) => {
+		return productServices.getProductsByOrg(ctx.organizationId);
 	}),
-	create: protectedProcedure.input(createProduct).mutation(({ input }) => {
-		return productServices.createProduct(input);
+	create: protectedProcedure.input(createProduct).mutation(({ input, ctx }) => {
+		return productServices.createProduct(input, ctx.organizationId);
 	}),
 	getStock: protectedProcedure
 		.input(getProductStockSchema)
-		.query(({ input }) => {
-			return productServices.getProductStock(input);
+		.query(({ input, ctx }) => {
+			return productServices.getProductStock(input, ctx.organizationId);
 		}),
 	category: router({
 		getAll: publicProcedure.query(productServices.getAllProductCategories),
-		getAllByOrg: protectedProcedure.input(z.string()).query(({ input }) => {
-			return productServices.getAllProductCategoriesByOrg(input);
+		getAllByOrg: protectedProcedure.query(({ ctx }) => {
+			return productServices.getAllProductCategoriesByOrg(ctx.organizationId);
 		}),
 		getById: publicProcedure.input(z.string()).query(({ input }) => {
 			return productServices.getProductCategoryById(input);
@@ -37,8 +37,8 @@ export const productRouter = router({
 		}),
 		create: protectedProcedure
 			.input(createProductCategory)
-			.mutation(({ input }) => {
-				return productServices.createProductCategory(input);
+			.mutation(({ input, ctx }) => {
+				return productServices.createProductCategory(input, ctx.organizationId);
 			}),
 		update: protectedProcedure
 			.input(updateProductCategory)

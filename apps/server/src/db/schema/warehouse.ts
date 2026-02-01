@@ -24,6 +24,15 @@ export const warehouses = pgTable(
 	(t) => [unique().on(t.organizationId, t.code)],
 );
 
+export const warehouseLocations = [
+	"storage",
+	"staging_in",
+	"staging_out",
+	"qc_hold",
+	"damaged",
+	"returns",
+] as const;
+
 export const locations = pgTable(
 	"location",
 	{
@@ -33,14 +42,7 @@ export const locations = pgTable(
 			.notNull(),
 		code: text("code").notNull(),
 		type: text("type", {
-			enum: [
-				"storage",
-				"staging_in",
-				"staging_out",
-				"qc_hold",
-				"damaged",
-				"returns",
-			],
+			enum: warehouseLocations,
 		}).notNull(),
 		temperatureMin: numeric("temperature_c_min", { precision: 10, scale: 2 }),
 		temperatureMax: numeric("temperature_c_max", { precision: 10, scale: 2 }),

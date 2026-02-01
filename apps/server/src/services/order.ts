@@ -98,7 +98,10 @@ const _removeInventoryReservation = async (
 
 // ===================== SALES ORDERS =====================
 
-export const createSalesOrder = async (input: CreateSalesOrderInput) => {
+export const createSalesOrder = async (
+	input: CreateSalesOrderInput,
+	organizationId: string,
+) => {
 	return await db.transaction(async (tx) => {
 		// Skip organization validation for testing - should be handled by auth middleware
 		// Skip customer validation for testing
@@ -107,25 +110,22 @@ export const createSalesOrder = async (input: CreateSalesOrderInput) => {
 			qty: line.qtyOrdered,
 			uomCode: line.uomCode,
 		}));
-		await _validateOrderStock(tx, input.organizationId, linesForValidation);
+		await _validateOrderStock(tx, organizationId, linesForValidation);
 
-		// Generate order code (SO-YYYY-NNNN)
+		// Generate unique order code using timestamp and random suffix
 		const year = new Date().getFullYear();
-		const [lastOrder] = await tx
-			.select({ count: sql<number>`COUNT(*)` })
-			.from(salesOrders)
-			.where(
-				sql`${salesOrders.organizationId} = ${input.organizationId} AND ${salesOrders.code} LIKE ${`SO-${year}-%`}`,
-			);
-
-		const nextNumber = (Number(lastOrder?.count) || 0) + 1;
-		const orderCode = `SO-${year}-${nextNumber.toString().padStart(4, "0")}`;
+		const timestamp = Date.now();
+		const randomSuffix = Math.random()
+			.toString(36)
+			.substring(2, 6)
+			.toUpperCase();
+		const orderCode = `SO-${year}-${timestamp}-${randomSuffix}`;
 
 		// Create sales order
 		const [createdOrder] = await tx
 			.insert(salesOrders)
 			.values({
-				organizationId: input.organizationId,
+				organizationId: organizationId,
 				customerId: input.customerId,
 				warehouseId: input.warehouseId,
 				code: orderCode,
@@ -162,7 +162,7 @@ export const createSalesOrder = async (input: CreateSalesOrderInput) => {
 			await _createInventoryReservation(
 				tx,
 				createdLine.id,
-				input.organizationId,
+				organizationId,
 				line.productId,
 				qtyInBase,
 			);
@@ -294,27 +294,27 @@ export const cancelSalesOrder = async (orderId: string) => {
 
 // ===================== PURCHASE ORDERS =====================
 
-export const createPurchaseOrder = async (input: CreatePurchaseOrderInput) => {
+export const createPurchaseOrder = async (
+	input: CreatePurchaseOrderInput,
+	organizationId: string,
+) => {
 	return await db.transaction(async (tx) => {
 		// Skip organization and supplier validation for testing - should be handled by auth middleware
 
-		// Generate order code (PO-YYYY-NNNN)
+		// Generate unique order code using timestamp and random suffix
 		const year = new Date().getFullYear();
-		const [lastOrder] = await tx
-			.select({ count: sql<number>`COUNT(*)` })
-			.from(purchaseOrders)
-			.where(
-				sql`${purchaseOrders.organizationId} = ${input.organizationId} AND ${purchaseOrders.code} LIKE ${`PO-${year}-%`}`,
-			);
-
-		const nextNumber = (Number(lastOrder?.count) || 0) + 1;
-		const orderCode = `PO-${year}-${nextNumber.toString().padStart(4, "0")}`;
+		const timestamp = Date.now();
+		const randomSuffix = Math.random()
+			.toString(36)
+			.substring(2, 6)
+			.toUpperCase();
+		const orderCode = `PO-${year}-${timestamp}-${randomSuffix}`;
 
 		// Create purchase order
 		const [createdOrder] = await tx
 			.insert(purchaseOrders)
 			.values({
-				organizationId: input.organizationId,
+				organizationId: organizationId,
 				supplierId: input.supplierId,
 				warehouseId: input.warehouseId,
 				code: orderCode,
@@ -521,6 +521,7 @@ export const getPurchaseOrderById = async (
 // List sales orders with pagination and filters
 export const getSalesOrders = async (
 	input: ListSalesOrdersInput,
+	organizationId: string,
 ): Promise<{
 	orders: (typeof salesOrders.$inferSelect)[];
 	pagination: {
@@ -530,16 +531,8 @@ export const getSalesOrders = async (
 		hasMore: boolean;
 	};
 }> => {
-	const {
-		organizationId,
-		status,
-		customerId,
-		warehouseId,
-		dateFrom,
-		dateTo,
-		page,
-		limit,
-	} = input;
+	const { status, customerId, warehouseId, dateFrom, dateTo, page, limit } =
+		input;
 	const offset = (page - 1) * limit;
 
 	// Build where conditions
@@ -599,6 +592,7 @@ export const getSalesOrders = async (
 // List purchase orders with pagination and filters
 export const getPurchaseOrders = async (
 	input: ListPurchaseOrdersInput,
+	organizationId: string,
 ): Promise<{
 	orders: (typeof purchaseOrders.$inferSelect)[];
 	pagination: {
@@ -608,16 +602,8 @@ export const getPurchaseOrders = async (
 		hasMore: boolean;
 	};
 }> => {
-	const {
-		organizationId,
-		status,
-		supplierId,
-		warehouseId,
-		dateFrom,
-		dateTo,
-		page,
-		limit,
-	} = input;
+	const { status, supplierId, warehouseId, dateFrom, dateTo, page, limit } =
+		input;
 	const offset = (page - 1) * limit;
 
 	// Build where conditions
@@ -742,9 +728,9 @@ export const updateSalesOrder = async (
 					productId: line.id
 						? currentOrder.salesOrderLines.find((l) => l.id === line.id)
 								?.productId || ""
-						: (line as any).productId, // New lines
-					qty: (line as any).qtyOrdered || line.qtyOrdered || 0,
-					uomCode: (line as any).uomCode || line.uomCode,
+						: line.productId, // New lines
+					qty: line.qtyOrdered || line.qtyOrdered || 0,
+					uomCode: line.uomCode || line.uomCode,
 				}))
 				.filter((line) => line.productId); // Filter valid lines
 

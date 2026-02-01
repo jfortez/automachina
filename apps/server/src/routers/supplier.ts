@@ -13,12 +13,14 @@ export const supplierRouter = router({
 	getById: publicProcedure.input(z.string()).query(({ input }) => {
 		return supplierServices.getSupplierById(input);
 	}),
-	getByOrg: protectedProcedure.input(z.string()).query(({ input }) => {
-		return supplierServices.getSuppliersByOrg(input);
+	getByOrg: protectedProcedure.query(({ ctx }) => {
+		return supplierServices.getSuppliersByOrg(ctx.organizationId);
 	}),
-	create: protectedProcedure.input(createSupplier).mutation(({ input }) => {
-		return supplierServices.createSupplier(input);
-	}),
+	create: protectedProcedure
+		.input(createSupplier)
+		.mutation(({ input, ctx }) => {
+			return supplierServices.createSupplier(input, ctx.organizationId);
+		}),
 	update: protectedProcedure.input(updateSupplier).mutation(({ input }) => {
 		return supplierServices.updateSupplier(input);
 	}),

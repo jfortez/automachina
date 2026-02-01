@@ -4,19 +4,17 @@ const orderLineSchema = z.object({
 	productId: z.string(),
 	qtyOrdered: z.number().positive(),
 	uomCode: z.string().min(1),
-	pricePerUom: z.number().min(0).optional(), // Override price
+	pricePerUom: z.number().min(0).optional(),
 	currency: z.string().default("USD"),
 	notes: z.string().optional(),
 });
 
-// Sales Order DTOs
 export const createSalesOrderSchema = z.object({
-	organizationId: z.string(),
 	customerId: z.string(),
 	warehouseId: z.string().optional(),
 	lines: z.array(orderLineSchema).min(1),
 	notes: z.string().optional(),
-	referenceNumber: z.string().optional(), // External reference
+	referenceNumber: z.string().optional(),
 });
 
 export const updateSalesOrderSchema = z.object({
@@ -26,7 +24,7 @@ export const updateSalesOrderSchema = z.object({
 	lines: z
 		.array(
 			orderLineSchema.extend({
-				id: z.string().optional(), // For updating existing lines
+				id: z.string().optional(),
 			}),
 		)
 		.optional(),
@@ -36,9 +34,7 @@ export const updateSalesOrderSchema = z.object({
 export type CreateSalesOrderInput = z.infer<typeof createSalesOrderSchema>;
 export type UpdateSalesOrderInput = z.infer<typeof updateSalesOrderSchema>;
 
-// Query DTOs
 export const listSalesOrdersSchema = z.object({
-	organizationId: z.string(),
 	status: z.enum(["open", "processing", "fulfilled", "cancelled"]).optional(),
 	customerId: z.string().optional(),
 	warehouseId: z.string().optional(),
@@ -49,7 +45,6 @@ export const listSalesOrdersSchema = z.object({
 });
 
 export const listPurchaseOrdersSchema = z.object({
-	organizationId: z.string(),
 	status: z
 		.enum(["open", "ordered", "partially_received", "received", "cancelled"])
 		.optional(),
@@ -65,9 +60,7 @@ export const getOrderByIdSchema = z.object({
 	id: z.string(),
 });
 
-// Purchase Order DTOs
 export const createPurchaseOrderSchema = z.object({
-	organizationId: z.string(),
 	supplierId: z.string(),
 	warehouseId: z.string().optional(),
 	lines: z.array(orderLineSchema).min(1),
@@ -93,15 +86,14 @@ export const updatePurchaseOrderSchema = z.object({
 	expectedDeliveryDate: z.date().optional(),
 });
 
-// Receipt DTOs (for receiving purchase orders)
 export const receivePurchaseOrderSchema = z.object({
 	purchaseOrderId: z.string(),
 	receiptLines: z.array(
 		z.object({
 			orderLineId: z.string(),
-			qtyReceived: z.number().min(0), // Can be 0 for partial receipts
-			uomCode: z.string().min(1), // Must match order line
-			costPerUom: z.number().min(0).optional(), // Override cost
+			qtyReceived: z.number().min(0),
+			uomCode: z.string().min(1),
+			costPerUom: z.number().min(0).optional(),
 			currency: z.string().default("USD"),
 			batchNumber: z.string().optional(),
 			expirationDate: z.date().optional(),

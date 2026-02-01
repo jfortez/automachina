@@ -2,7 +2,7 @@ import type { inferProcedureInput } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AppRouter } from "@/routers";
-import { getProductStock } from "@/services/product";
+
 import { globals } from "./globals";
 import { setupTestContext } from "./util";
 
@@ -15,11 +15,9 @@ describe("Testing  Inventory for default uom_conversion", () => {
 	});
 
 	it.sequential("should receive inventory", async () => {
-		const { caller, defaultOrg, defaultCategoryId } = ctx;
-		const orgId = defaultOrg.id;
+		const { caller, defaultCategoryId } = ctx;
 
 		const productInput: inferProcedureInput<AppRouter["product"]["create"]> = {
-			organizationId: orgId,
 			sku: nanoid(10),
 			name: "Fideos para ramen",
 			baseUom: "EA",
@@ -45,7 +43,6 @@ describe("Testing  Inventory for default uom_conversion", () => {
 		const inventoryInput: inferProcedureInput<
 			AppRouter["inventory"]["receive"]
 		> = {
-			organizationId: orgId,
 			warehouseId: globals.id,
 			productId: createdProduct.id,
 			qty: 6,
@@ -63,7 +60,6 @@ describe("Testing  Inventory for default uom_conversion", () => {
 
 	it.sequential("should sell product", async () => {
 		const sellInput: inferProcedureInput<AppRouter["inventory"]["sell"]> = {
-			organizationId: ctx.defaultOrg.id,
 			warehouseId: globals.id,
 			productId: productId,
 			lines: [
@@ -79,9 +75,8 @@ describe("Testing  Inventory for default uom_conversion", () => {
 			success: true,
 		});
 
-		const stock = await getProductStock({
-			organizationId: ctx.defaultOrg.id,
-			productId: productId,
+		const stock = await ctx.caller.product.getStock({
+			productId,
 			warehouseId: globals.id,
 		});
 
@@ -95,7 +90,6 @@ describe("Testing  Inventory for default uom_conversion", () => {
 		"should fail when selling more than available",
 		async () => {
 			const sellInput: inferProcedureInput<AppRouter["inventory"]["sell"]> = {
-				organizationId: ctx.defaultOrg.id,
 				warehouseId: globals.id,
 				productId: productId,
 				lines: [
@@ -117,11 +111,9 @@ describe("Testing  Inventory using productUom", () => {
 	});
 
 	it.sequential("should receive inventory", async () => {
-		const { caller, defaultOrg, defaultCategoryId } = ctx;
-		const orgId = defaultOrg.id;
+		const { caller, defaultCategoryId } = ctx;
 
 		const productInput: inferProcedureInput<AppRouter["product"]["create"]> = {
-			organizationId: orgId,
 			sku: nanoid(10),
 			name: "Fideos para ramen",
 			baseUom: "EA",
@@ -153,7 +145,6 @@ describe("Testing  Inventory using productUom", () => {
 		const inventoryInput: inferProcedureInput<
 			AppRouter["inventory"]["receive"]
 		> = {
-			organizationId: orgId,
 			warehouseId: globals.id,
 			productId: createdProduct.id,
 			qty: 3,
@@ -171,7 +162,6 @@ describe("Testing  Inventory using productUom", () => {
 
 	it.sequential("should sell product", async () => {
 		const sellInput: inferProcedureInput<AppRouter["inventory"]["sell"]> = {
-			organizationId: ctx.defaultOrg.id,
 			warehouseId: globals.id,
 			productId: productId,
 			lines: [
@@ -186,9 +176,8 @@ describe("Testing  Inventory using productUom", () => {
 			success: true,
 		});
 
-		const stock = await getProductStock({
-			organizationId: ctx.defaultOrg.id,
-			productId: productId,
+		const stock = await ctx.caller.product.getStock({
+			productId,
 			warehouseId: globals.id,
 		});
 
@@ -202,7 +191,6 @@ describe("Testing  Inventory using productUom", () => {
 		"should fail when selling more than available",
 		async () => {
 			const sellInput: inferProcedureInput<AppRouter["inventory"]["sell"]> = {
-				organizationId: ctx.defaultOrg.id,
 				warehouseId: globals.id,
 				productId: productId,
 				lines: [
@@ -224,11 +212,9 @@ describe("Testing Inventory Adjustments", () => {
 	});
 
 	beforeEach(async () => {
-		const { caller, defaultOrg, defaultCategoryId } = ctx;
-		const orgId = defaultOrg.id;
+		const { caller, defaultCategoryId } = ctx;
 
 		const productInput: inferProcedureInput<AppRouter["product"]["create"]> = {
-			organizationId: orgId,
 			sku: nanoid(10),
 			name: "Test Product for Adjustment",
 			baseUom: "EA",
@@ -259,7 +245,6 @@ describe("Testing Inventory Adjustments", () => {
 		// Start with 50 EA (5 PK) stock for adjustment testing
 		const receiveInput: inferProcedureInput<AppRouter["inventory"]["receive"]> =
 			{
-				organizationId: orgId,
 				warehouseId: globals.id,
 				productId: createdProduct.id,
 				qty: 5,
@@ -272,7 +257,6 @@ describe("Testing Inventory Adjustments", () => {
 
 	it.sequential("should perform positive adjustment in base UoM", async () => {
 		const adjustInput: inferProcedureInput<AppRouter["inventory"]["adjust"]> = {
-			organizationId: ctx.defaultOrg.id,
 			warehouseId: globals.id,
 			productId: productId,
 			adjustmentType: "pos",
@@ -289,10 +273,8 @@ describe("Testing Inventory Adjustments", () => {
 			qtyAdjustedInBase: 5,
 		});
 
-		// Check stock increased by 5 EA
-		const stock = await getProductStock({
-			organizationId: ctx.defaultOrg.id,
-			productId: productId,
+		const stock = await ctx.caller.product.getStock({
+			productId,
 			warehouseId: globals.id,
 		});
 
@@ -307,7 +289,6 @@ describe("Testing Inventory Adjustments", () => {
 		async () => {
 			const adjustInput: inferProcedureInput<AppRouter["inventory"]["adjust"]> =
 				{
-					organizationId: ctx.defaultOrg.id,
 					warehouseId: globals.id,
 					productId: productId,
 					adjustmentType: "pos",
@@ -325,9 +306,8 @@ describe("Testing Inventory Adjustments", () => {
 			});
 
 			// Check stock increased by 20 EA (2 PK)
-			const stock = await getProductStock({
-				organizationId: ctx.defaultOrg.id,
-				productId: productId,
+			const stock = await ctx.caller.product.getStock({
+				productId,
 				warehouseId: globals.id,
 			});
 
@@ -340,7 +320,6 @@ describe("Testing Inventory Adjustments", () => {
 
 	it.sequential("should perform negative adjustment", async () => {
 		const adjustInput: inferProcedureInput<AppRouter["inventory"]["adjust"]> = {
-			organizationId: ctx.defaultOrg.id,
 			warehouseId: globals.id,
 			productId: productId,
 			adjustmentType: "neg",
@@ -358,9 +337,8 @@ describe("Testing Inventory Adjustments", () => {
 		});
 
 		// Check stock decreased by 10 EA
-		const stock = await getProductStock({
-			organizationId: ctx.defaultOrg.id,
-			productId: productId,
+		const stock = await ctx.caller.product.getStock({
+			productId,
 			warehouseId: globals.id,
 		});
 
@@ -375,7 +353,6 @@ describe("Testing Inventory Adjustments", () => {
 		async () => {
 			const adjustInput: inferProcedureInput<AppRouter["inventory"]["adjust"]> =
 				{
-					organizationId: ctx.defaultOrg.id,
 					warehouseId: globals.id,
 					productId: productId,
 					adjustmentType: "neg",
@@ -389,11 +366,10 @@ describe("Testing Inventory Adjustments", () => {
 	);
 
 	it.sequential.fails("should fail for non-physical products", async () => {
-		const { caller, defaultOrg, defaultCategoryId } = ctx;
+		const { caller, defaultCategoryId } = ctx;
 
 		// Create non-physical product
 		const nonPhysicalProduct = await caller.product.create({
-			organizationId: defaultOrg.id,
 			sku: nanoid(10),
 			name: "Service Product",
 			baseUom: "EA",
@@ -404,7 +380,6 @@ describe("Testing Inventory Adjustments", () => {
 		});
 
 		const adjustInput: inferProcedureInput<AppRouter["inventory"]["adjust"]> = {
-			organizationId: ctx.defaultOrg.id,
 			warehouseId: globals.id,
 			productId: nonPhysicalProduct.id,
 			adjustmentType: "pos",
@@ -418,7 +393,6 @@ describe("Testing Inventory Adjustments", () => {
 
 	it.sequential.fails("should fail with invalid UoM conversion", async () => {
 		const adjustInput: inferProcedureInput<AppRouter["inventory"]["adjust"]> = {
-			organizationId: ctx.defaultOrg.id,
 			warehouseId: globals.id,
 			productId: productId,
 			adjustmentType: "pos",
@@ -432,7 +406,6 @@ describe("Testing Inventory Adjustments", () => {
 
 	it.sequential("should store audit trail in ledger notes", async () => {
 		const adjustInput: inferProcedureInput<AppRouter["inventory"]["adjust"]> = {
-			organizationId: ctx.defaultOrg.id,
 			warehouseId: globals.id,
 			productId: productId,
 			adjustmentType: "pos",

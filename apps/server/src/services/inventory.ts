@@ -70,7 +70,10 @@ const _insertLedgerEntry = async (
 	});
 };
 
-export const receiveInventory = async (d: ReceiveInventoryInput) => {
+export const receiveInventory = async (
+	d: ReceiveInventoryInput,
+	organizationId: string,
+) => {
 	return await db.transaction(async (tx) => {
 		// Validate product exists and is physical
 		const prod = await _validatePhysicalProduct(tx, d.productId);
@@ -85,7 +88,7 @@ export const receiveInventory = async (d: ReceiveInventoryInput) => {
 
 		// Insert receipt in inventory_ledger using helper
 		await _insertLedgerEntry(tx, {
-			organizationId: d.organizationId,
+			organizationId,
 			movementType: "receipt",
 			productId: d.productId,
 			warehouseId: d.warehouseId,
@@ -101,6 +104,7 @@ export const receiveInventory = async (d: ReceiveInventoryInput) => {
 };
 export const sellProduct = async (
 	d: SellProductInput & { returnTotalQty?: boolean },
+	organizationId: string,
 ) => {
 	return await db.transaction(async (tx) => {
 		// Validate product exists and is physical
@@ -126,7 +130,7 @@ export const sellProduct = async (
 		// Get current stock in base
 		const stock = await _getStock(
 			{
-				organizationId: d.organizationId,
+				organizationId,
 				productId: d.productId,
 				warehouseId: d.warehouseId,
 			},
@@ -152,14 +156,14 @@ export const sellProduct = async (
 					.select({ count: sql`COUNT(*)` })
 					.from(handlingUnits)
 					.where(
-						sql`${handlingUnits.uomCode} = ${packageUom.uomCode} AND ${handlingUnits.organizationId} = ${d.organizationId}`,
+						sql`${handlingUnits.uomCode} = ${packageUom.uomCode} AND ${handlingUnits.organizationId} = ${organizationId}`,
 					);
 
 				if (Number(availablePackages[0].count) >= packagesNeeded) {
 					const qtyToUnpack = packagesNeeded * Number(packageUom.qtyInBase);
 
 					await _insertLedgerEntry(tx, {
-						organizationId: d.organizationId,
+						organizationId,
 						productId: d.productId,
 						movementType: "disassembly_out",
 						qtyInBase: qtyToUnpack.toString(),
@@ -167,7 +171,7 @@ export const sellProduct = async (
 						qtyInUom: packagesNeeded.toString(),
 					});
 					await _insertLedgerEntry(tx, {
-						organizationId: d.organizationId,
+						organizationId,
 						productId: d.productId,
 						movementType: "disassembly_in",
 						qtyInBase: qtyToUnpack.toString(),
@@ -193,7 +197,7 @@ export const sellProduct = async (
 			const lineQtyInBase = line.qty * (lineConversions[line.uomCode] || 1);
 
 			await _insertLedgerEntry(tx, {
-				organizationId: d.organizationId,
+				organizationId,
 				productId: d.productId,
 				warehouseId: d.warehouseId,
 				movementType: "issue",
@@ -213,7 +217,7 @@ export const sellProduct = async (
 		if (d.returnTotalQty) {
 			const updatedStock = await _getStock(
 				{
-					organizationId: d.organizationId,
+					organizationId,
 					productId: d.productId,
 					warehouseId: d.warehouseId,
 				},
@@ -228,7 +232,10 @@ export const sellProduct = async (
 	});
 };
 
-export const adjustInventory = async (d: AdjustInventoryInput) => {
+export const adjustInventory = async (
+	d: AdjustInventoryInput,
+	organizationId: string,
+) => {
 	return await db.transaction(async (tx) => {
 		// Validate product exists and is physical
 		const prod = await _validatePhysicalProduct(tx, d.productId);
@@ -246,7 +253,7 @@ export const adjustInventory = async (d: AdjustInventoryInput) => {
 		if (d.adjustmentType === "neg") {
 			const currentStock = await _getStock(
 				{
-					organizationId: d.organizationId,
+					organizationId,
 					productId: d.productId,
 					warehouseId: d.warehouseId,
 				},
@@ -276,7 +283,7 @@ export const adjustInventory = async (d: AdjustInventoryInput) => {
 			.join(" | ");
 
 		await _insertLedgerEntry(tx, {
-			organizationId: d.organizationId,
+			organizationId,
 			productId: d.productId,
 			warehouseId: d.warehouseId,
 			movementType,

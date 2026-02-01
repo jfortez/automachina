@@ -15,8 +15,14 @@ const getCustomerById = async (id: string) => {
 	return customer;
 };
 
-const createCustomer = async (data: CreateCustomerInput) => {
-	const customer = await db.insert(customers).values(data).returning();
+const createCustomer = async (
+	data: CreateCustomerInput,
+	organizationId: string,
+) => {
+	const customer = await db
+		.insert(customers)
+		.values({ ...data, organizationId })
+		.returning();
 	return customer;
 };
 

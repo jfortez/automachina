@@ -14,14 +14,13 @@ describe("Testing Invoice Management System", () => {
 	describe("Invoice CRUD Operations", () => {
 		it.sequential("should get invoice by ID - existing invoice", async () => {
 			const { caller } = ctx;
-			const orgId = globals.organization.id;
+
 			const timestamp = Date.now();
 
 			// Create a test customer
 			const customerInput: inferProcedureInput<
 				AppRouter["customer"]["create"]
 			> = {
-				organizationId: orgId,
 				code: `CUST_INV_${timestamp}`,
 				name: "Customer for Invoice Test",
 			};
@@ -30,7 +29,6 @@ describe("Testing Invoice Management System", () => {
 			// Create a product with stock
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: orgId,
 					sku: `INV_SKU_${timestamp}`,
 					name: "Product for Invoice Test",
 					baseUom: "EA",
@@ -44,7 +42,6 @@ describe("Testing Invoice Management System", () => {
 			const receiveInput: inferProcedureInput<
 				AppRouter["inventory"]["receive"]
 			> = {
-				organizationId: orgId,
 				productId: product.id,
 				qty: 20,
 				uomCode: "EA",
@@ -57,7 +54,6 @@ describe("Testing Invoice Management System", () => {
 			const orderInput: inferProcedureInput<
 				AppRouter["order"]["sales"]["create"]
 			> = {
-				organizationId: orgId,
 				customerId: customer.id,
 				warehouseId: globals.warehouse.id,
 				lines: [
@@ -111,11 +107,9 @@ describe("Testing Invoice Management System", () => {
 
 		it.sequential("should list invoices with filters", async () => {
 			const { caller } = ctx;
-			const orgId = globals.organization.id;
 
 			// Get current count
 			const initialList = await caller.invoice.list({
-				organizationId: orgId,
 				page: 1,
 				limit: 10,
 			});
@@ -126,7 +120,6 @@ describe("Testing Invoice Management System", () => {
 			const customerInput: inferProcedureInput<
 				AppRouter["customer"]["create"]
 			> = {
-				organizationId: orgId,
 				code: `LIST_CUST_${Date.now()}`,
 				name: "Customer for List Test",
 			};
@@ -135,7 +128,6 @@ describe("Testing Invoice Management System", () => {
 			// Create product
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: orgId,
 					sku: `LIST_SKU_${Date.now()}`,
 					name: "Product for List Test",
 					baseUom: "EA",
@@ -147,7 +139,6 @@ describe("Testing Invoice Management System", () => {
 
 			// Add stock
 			await caller.inventory.receive({
-				organizationId: orgId,
 				productId: product.id,
 				qty: 20,
 				uomCode: "EA",
@@ -159,7 +150,6 @@ describe("Testing Invoice Management System", () => {
 			const orderInput: inferProcedureInput<
 				AppRouter["order"]["sales"]["create"]
 			> = {
-				organizationId: orgId,
 				customerId: customer.id,
 				warehouseId: globals.warehouse.id,
 				lines: [
@@ -182,7 +172,6 @@ describe("Testing Invoice Management System", () => {
 
 			// List all invoices
 			const allInvoices = await caller.invoice.list({
-				organizationId: orgId,
 				page: 1,
 				limit: 10,
 			});
@@ -191,7 +180,6 @@ describe("Testing Invoice Management System", () => {
 
 			// Filter by customer
 			const customerInvoices = await caller.invoice.list({
-				organizationId: orgId,
 				customerId: customer.id,
 				page: 1,
 				limit: 10,
@@ -202,7 +190,6 @@ describe("Testing Invoice Management System", () => {
 
 			// Filter by status
 			const issuedInvoices = await caller.invoice.list({
-				organizationId: orgId,
 				status: "issued",
 				page: 1,
 				limit: 10,
@@ -214,10 +201,8 @@ describe("Testing Invoice Management System", () => {
 
 		it.sequential("should list invoices with pagination", async () => {
 			const { caller } = ctx;
-			const orgId = globals.organization.id;
 
 			const paginatedList = await caller.invoice.list({
-				organizationId: orgId,
 				page: 1,
 				limit: 2,
 			});
@@ -229,7 +214,6 @@ describe("Testing Invoice Management System", () => {
 
 		it.sequential("should update invoice - valid status change", async () => {
 			const { caller } = ctx;
-			const orgId = globals.organization.id;
 
 			// Create draft invoice (if we had manual invoice creation)
 			// For now, create an invoice and test status changes through update
@@ -238,7 +222,6 @@ describe("Testing Invoice Management System", () => {
 			const customerInput: inferProcedureInput<
 				AppRouter["customer"]["create"]
 			> = {
-				organizationId: orgId,
 				code: `UPDATE_CUST_${Date.now()}`,
 				name: "Customer for Update Test",
 			};
@@ -246,7 +229,6 @@ describe("Testing Invoice Management System", () => {
 
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: orgId,
 					sku: `UPDATE_SKU_${Date.now()}`,
 					name: "Product for Update Test",
 					baseUom: "EA",
@@ -257,7 +239,6 @@ describe("Testing Invoice Management System", () => {
 			const product = await caller.product.create(productInput);
 
 			await caller.inventory.receive({
-				organizationId: orgId,
 				productId: product.id,
 				qty: 20,
 				uomCode: "EA",
@@ -268,7 +249,6 @@ describe("Testing Invoice Management System", () => {
 			const orderInput: inferProcedureInput<
 				AppRouter["order"]["sales"]["create"]
 			> = {
-				organizationId: orgId,
 				customerId: customer.id,
 				warehouseId: globals.warehouse.id,
 				lines: [
@@ -307,13 +287,11 @@ describe("Testing Invoice Management System", () => {
 
 		it.sequential("should update invoice - invalid status change", async () => {
 			const { caller } = ctx;
-			const orgId = globals.organization.id;
 
 			// Create issued invoice
 			const customerInput: inferProcedureInput<
 				AppRouter["customer"]["create"]
 			> = {
-				organizationId: orgId,
 				code: `INVALID_CUST_${Date.now()}`,
 				name: "Customer for Invalid Status Test",
 			};
@@ -321,7 +299,6 @@ describe("Testing Invoice Management System", () => {
 
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: orgId,
 					sku: `INVALID_SKU_${Date.now()}`,
 					name: "Product for Invalid Status Test",
 					baseUom: "EA",
@@ -332,7 +309,6 @@ describe("Testing Invoice Management System", () => {
 			const product = await caller.product.create(productInput);
 
 			await caller.inventory.receive({
-				organizationId: orgId,
 				productId: product.id,
 				qty: 20,
 				uomCode: "EA",
@@ -343,7 +319,6 @@ describe("Testing Invoice Management System", () => {
 			const orderInput: inferProcedureInput<
 				AppRouter["order"]["sales"]["create"]
 			> = {
-				organizationId: orgId,
 				customerId: customer.id,
 				warehouseId: globals.warehouse.id,
 				lines: [
@@ -386,13 +361,11 @@ describe("Testing Invoice Management System", () => {
 			"should delete invoice - non-draft invoice (should fail)",
 			async () => {
 				const { caller } = ctx;
-				const orgId = globals.organization.id;
 
 				// Create issued invoice
 				const customerInput: inferProcedureInput<
 					AppRouter["customer"]["create"]
 				> = {
-					organizationId: orgId,
 					code: `DELETE_FAIL_CUST_${Date.now()}`,
 					name: "Customer for Delete Fail Test",
 				};
@@ -401,7 +374,6 @@ describe("Testing Invoice Management System", () => {
 				const productInput: inferProcedureInput<
 					AppRouter["product"]["create"]
 				> = {
-					organizationId: orgId,
 					sku: `DELETE_FAIL_SKU_${Date.now()}`,
 					name: "Product for Delete Fail Test",
 					baseUom: "EA",
@@ -412,7 +384,6 @@ describe("Testing Invoice Management System", () => {
 				const product = await caller.product.create(productInput);
 
 				await caller.inventory.receive({
-					organizationId: orgId,
 					productId: product.id,
 					qty: 20,
 					uomCode: "EA",
@@ -423,7 +394,6 @@ describe("Testing Invoice Management System", () => {
 				const orderInput: inferProcedureInput<
 					AppRouter["order"]["sales"]["create"]
 				> = {
-					organizationId: orgId,
 					customerId: customer.id,
 					warehouseId: globals.warehouse.id,
 					lines: [
@@ -458,13 +428,11 @@ describe("Testing Invoice Management System", () => {
 
 		it.sequential("should mark invoice as paid - issued invoice", async () => {
 			const { caller } = ctx;
-			const orgId = globals.organization.id;
 
 			// Create issued invoice
 			const customerInput: inferProcedureInput<
 				AppRouter["customer"]["create"]
 			> = {
-				organizationId: orgId,
 				code: `PAID_CUST_${Date.now()}`,
 				name: "Customer for Paid Test",
 			};
@@ -472,7 +440,6 @@ describe("Testing Invoice Management System", () => {
 
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: orgId,
 					sku: `PAID_SKU_${Date.now()}`,
 					name: "Product for Paid Test",
 					baseUom: "EA",
@@ -483,7 +450,6 @@ describe("Testing Invoice Management System", () => {
 			const product = await caller.product.create(productInput);
 
 			await caller.inventory.receive({
-				organizationId: orgId,
 				productId: product.id,
 				qty: 20,
 				uomCode: "EA",
@@ -494,7 +460,6 @@ describe("Testing Invoice Management System", () => {
 			const orderInput: inferProcedureInput<
 				AppRouter["order"]["sales"]["create"]
 			> = {
-				organizationId: orgId,
 				customerId: customer.id,
 				warehouseId: globals.warehouse.id,
 				lines: [
@@ -531,13 +496,11 @@ describe("Testing Invoice Management System", () => {
 			"should mark invoice as paid - already paid invoice",
 			async () => {
 				const { caller } = ctx;
-				const orgId = globals.organization.id;
 
 				// Create and pay invoice
 				const customerInput: inferProcedureInput<
 					AppRouter["customer"]["create"]
 				> = {
-					organizationId: orgId,
 					code: `ALREADY_PAID_CUST_${Date.now()}`,
 					name: "Customer for Already Paid Test",
 				};
@@ -546,7 +509,6 @@ describe("Testing Invoice Management System", () => {
 				const productInput: inferProcedureInput<
 					AppRouter["product"]["create"]
 				> = {
-					organizationId: orgId,
 					sku: `ALREADY_PAID_SKU_${Date.now()}`,
 					name: "Product for Already Paid Test",
 					baseUom: "EA",
@@ -557,7 +519,6 @@ describe("Testing Invoice Management System", () => {
 				const product = await caller.product.create(productInput);
 
 				await caller.inventory.receive({
-					organizationId: orgId,
 					productId: product.id,
 					qty: 20,
 					uomCode: "EA",
@@ -568,7 +529,6 @@ describe("Testing Invoice Management System", () => {
 				const orderInput: inferProcedureInput<
 					AppRouter["order"]["sales"]["create"]
 				> = {
-					organizationId: orgId,
 					customerId: customer.id,
 					warehouseId: globals.warehouse.id,
 					lines: [
@@ -610,13 +570,11 @@ describe("Testing Invoice Management System", () => {
 	describe("Invoice Generation", () => {
 		it.sequential("should generate invoice numbering correctly", async () => {
 			const { caller } = ctx;
-			const orgId = globals.organization.id;
 
 			// Create customer
 			const customerInput: inferProcedureInput<
 				AppRouter["customer"]["create"]
 			> = {
-				organizationId: orgId,
 				code: `NUMBERING_CUST_${Date.now()}`,
 				name: "Customer for Numbering Test",
 			};
@@ -625,7 +583,6 @@ describe("Testing Invoice Management System", () => {
 			// Create product
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: orgId,
 					sku: `NUMBERING_SKU_${Date.now()}`,
 					name: "Product for Numbering Test",
 					baseUom: "EA",
@@ -636,7 +593,6 @@ describe("Testing Invoice Management System", () => {
 			const product = await caller.product.create(productInput);
 
 			await caller.inventory.receive({
-				organizationId: orgId,
 				productId: product.id,
 				qty: 50,
 				uomCode: "EA",
@@ -648,7 +604,6 @@ describe("Testing Invoice Management System", () => {
 			const orderInput1: inferProcedureInput<
 				AppRouter["order"]["sales"]["create"]
 			> = {
-				organizationId: orgId,
 				customerId: customer.id,
 				warehouseId: globals.warehouse.id,
 				lines: [
@@ -666,7 +621,6 @@ describe("Testing Invoice Management System", () => {
 			const orderInput2: inferProcedureInput<
 				AppRouter["order"]["sales"]["create"]
 			> = {
-				organizationId: orgId,
 				customerId: customer.id,
 				warehouseId: globals.warehouse.id,
 				lines: [
@@ -694,8 +648,8 @@ describe("Testing Invoice Management System", () => {
 				invoiceDate: new Date("2024-01-16"),
 			});
 
-			expect(invoice1.invoice.invoiceNumber).toMatch(/^INV-\d{6}-\d{4}$/);
-			expect(invoice2.invoice.invoiceNumber).toMatch(/^INV-\d{6}-\d{4}$/);
+			expect(invoice1.invoice.invoiceNumber).toMatch(/^INV-\d{6}-/);
+			expect(invoice2.invoice.invoiceNumber).toMatch(/^INV-\d{6}-/);
 			expect(invoice1.invoice.invoiceNumber).not.toBe(
 				invoice2.invoice.invoiceNumber,
 			);

@@ -15,7 +15,6 @@ describe("test customer router", async () => {
 		const input: inferProcedureInput<AppRouter["customer"]["create"]> = {
 			code: nanoid(10),
 			name: "Foobar",
-			organizationId: ctx.defaultOrg.id,
 		};
 
 		const [createdCustomer] = await ctx.caller.customer.create(input);

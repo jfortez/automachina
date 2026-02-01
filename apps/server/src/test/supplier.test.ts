@@ -20,18 +20,16 @@ describe("Testing Supplier Management System", () => {
 		});
 
 		it("should get suppliers by organization", async () => {
-			const suppliers = await ctx.caller.supplier.getByOrg(
-				globals.organization.id,
-			);
+			const suppliers = await ctx.caller.supplier.getByOrg();
 			expect(suppliers).toBeDefined();
 			expect(Array.isArray(suppliers)).toBe(true);
+			expect(suppliers.length).toBeGreaterThan(0);
 		});
 
 		it.sequential("should create a supplier", async () => {
 			const supplierInput: inferProcedureInput<
 				AppRouter["supplier"]["create"]
 			> = {
-				organizationId: globals.organization.id,
 				code: `TEST_SUP_${nanoid(5)}`,
 				name: "Test Supplier Ltda.",
 				image: "https://test.com/logo.png",
@@ -63,7 +61,6 @@ describe("Testing Supplier Management System", () => {
 			// Create a supplier first to update
 			const createInput: inferProcedureInput<AppRouter["supplier"]["create"]> =
 				{
-					organizationId: globals.organization.id,
 					code: `UPDATE_SUP_${nanoid(5)}`,
 					name: "Original Supplier Name",
 					contactInfo: { email: "original@test.com" },
@@ -96,7 +93,6 @@ describe("Testing Supplier Management System", () => {
 			// Create a supplier to delete
 			const createInput: inferProcedureInput<AppRouter["supplier"]["create"]> =
 				{
-					organizationId: globals.organization.id,
 					code: `DELETE_SUP_${nanoid(5)}`,
 					name: "Supplier to Delete",
 				};
@@ -124,7 +120,6 @@ describe("Testing Supplier Management System", () => {
 			const supplierInput: inferProcedureInput<
 				AppRouter["supplier"]["create"]
 			> = {
-				organizationId: globals.organization.id,
 				code: `PROD_SUP_${nanoid(5)}`,
 				name: "Supplier for Products Test",
 			};
@@ -135,7 +130,6 @@ describe("Testing Supplier Management System", () => {
 			// Create a product
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: globals.organization.id,
 					sku: nanoid(10),
 					name: "Test Product for Supplier",
 					baseUom: "EA",
@@ -257,7 +251,6 @@ describe("Testing Supplier Management System", () => {
 				const supplierInput: inferProcedureInput<
 					AppRouter["supplier"]["create"]
 				> = {
-					organizationId: globals.organization.id,
 					code: "DUPLICATE_CODE", // Same code
 					name: "First Supplier",
 				};

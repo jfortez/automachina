@@ -68,7 +68,7 @@ const getProductIdentifiers = async () => {
 	return identifiers;
 };
 
-const createProduct = async (d: CreateProductInput) => {
+const createProduct = async (d: CreateProductInput, organizationId: string) => {
 	console.log(d);
 	return await db.transaction(async (tx) => {
 		// Validate base UoM exists in uom table
@@ -128,7 +128,7 @@ const createProduct = async (d: CreateProductInput) => {
 		const [createdProduct] = await tx
 			.insert(productTable)
 			.values({
-				organizationId: d.organizationId,
+				organizationId,
 				sku: d.sku,
 				name: d.name,
 				description: d.description,
@@ -193,7 +193,7 @@ const createProduct = async (d: CreateProductInput) => {
 				const [newPriceList] = await tx
 					.insert(priceList)
 					.values({
-						organizationId: d.organizationId,
+						organizationId,
 						code: "public",
 						name: "Public Price List",
 						type: "public",
@@ -257,11 +257,14 @@ const getProductCategoryByCode = async (code: string) => {
 	});
 };
 
-const createProductCategory = async (d: CreateProductCategoryInput) => {
+const createProductCategory = async (
+	d: CreateProductCategoryInput,
+	organizationId: string,
+) => {
 	return await db
 		.insert(productCategory)
 		.values({
-			organizationId: d.organizationId,
+			organizationId,
 			name: d.name,
 			code: d.code,
 		})
@@ -320,7 +323,10 @@ export const _getStock = async (
 	return stock;
 };
 
-export const getProductStock = async (d: GetProductStockInput) => {
+export const getProductStock = async (
+	d: GetProductStockInput,
+	organizationId: string,
+) => {
 	return await db.transaction(async (tx) => {
 		const [product] = await tx
 			.select({
@@ -330,7 +336,10 @@ export const getProductStock = async (d: GetProductStockInput) => {
 			})
 			.from(productTable)
 			.where(
-				sql`${productTable.id} = ${d.productId} AND ${productTable.organizationId} = ${d.organizationId}`,
+				and(
+					eq(productTable.id, d.productId),
+					eq(productTable.organizationId, organizationId),
+				),
 			)
 			.limit(1);
 		if (!product) {
@@ -345,7 +354,7 @@ export const getProductStock = async (d: GetProductStockInput) => {
 
 		const stock = await _getStock(
 			{
-				organizationId: d.organizationId,
+				organizationId,
 				productId: d.productId,
 				warehouseId: d.warehouseId,
 			},

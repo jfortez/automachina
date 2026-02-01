@@ -379,7 +379,6 @@ describe("test UOM router and service", async () => {
 						baseUom: "EA",
 						trackingLevel: "none",
 						isPhysical: true,
-						organizationId: ctx.defaultOrg.id,
 						categoryId: ctx.defaultCategoryId,
 						productUoms: [
 							{
@@ -576,7 +575,6 @@ describe("test UOM router and service", async () => {
 				baseUom: "EA",
 				trackingLevel: "none",
 				isPhysical: true,
-				organizationId: ctx.defaultOrg.id,
 				categoryId: ctx.defaultCategoryId,
 			};
 
@@ -615,7 +613,6 @@ describe("test UOM router and service", async () => {
 				baseUom: "EA",
 				trackingLevel: "none",
 				isPhysical: true,
-				organizationId: ctx.defaultOrg.id,
 				categoryId: ctx.defaultCategoryId,
 				productUoms: [
 					{

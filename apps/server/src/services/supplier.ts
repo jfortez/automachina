@@ -9,8 +9,6 @@ import type {
 	UpdateSupplierProductInput,
 } from "@/dto/supplier";
 
-// === SUPPLIERS ===
-
 const getAllSuppliers = async () => {
 	const allSuppliers = await db.select().from(suppliers);
 	return allSuppliers;
@@ -30,8 +28,14 @@ const getSuppliersByOrg = async (organizationId: string) => {
 	return suppliersList;
 };
 
-const createSupplier = async (data: CreateSupplierInput) => {
-	const supplier = await db.insert(suppliers).values(data).returning();
+const createSupplier = async (
+	data: CreateSupplierInput,
+	organizationId: string,
+) => {
+	const supplier = await db
+		.insert(suppliers)
+		.values({ ...data, organizationId })
+		.returning();
 	return supplier;
 };
 
@@ -61,8 +65,6 @@ const deleteSupplier = async (id: string) => {
 
 	return supplier;
 };
-
-// === SUPPLIER PRODUCTS ===
 
 const getSupplierProducts = async (supplierId: string) => {
 	const supplierProductList = await db.query.supplierProducts.findMany({

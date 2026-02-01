@@ -13,8 +13,8 @@ const productImage = z.object({
 });
 
 const productPrice = z.object({
-	priceListId: z.string().optional(), // Link to priceList (e.g., 'public' or 'wholesale')
-	customerId: z.string().optional(), // Customer-specific pricing
+	priceListId: z.string().optional(),
+	customerId: z.string().optional(),
 	uomCode: z.string().min(1),
 	price: z.number().min(0),
 	currency: z.string().default("USD"),
@@ -30,13 +30,12 @@ const productUom = z.object({
 });
 
 const productIdentifier = z.object({
-	type: z.string().min(1), // e.g., 'GTIN', 'EAN', 'UPC'
+	type: z.string().min(1),
 	value: z.string().min(1),
-	uomCode: z.string().min(1).optional(), // Optional: Tie identifier to a specific UoM (e.g., package GTIN)
+	uomCode: z.string().min(1).optional(),
 });
 
 export const createProduct = z.object({
-	organizationId: z.string(),
 	sku: z.string().min(1),
 	name: z.string().min(1),
 	description: z.string().optional(),
@@ -46,21 +45,20 @@ export const createProduct = z.object({
 	trackingLevel: z
 		.enum(["none", "lot", "serial", "lot+serial"])
 		.default("none"),
-	attributes: recordSchema.optional(), //FOR LLM/ Semantic Search eg. Store tags, labels, colors, weights, etc. as JSON (e.g., { tags: ["Plomeria", "Roscable"], sizeOptions: ["1/2", "3/4"] })
+	attributes: recordSchema.optional(),
 	perishable: z.boolean().default(false),
 	shelfLifeDays: z.number().int().positive().optional(),
 	productUoms: z.array(productUom).optional(),
 	isPhysical: z.boolean().default(true),
-	productFamilyId: z.string().optional(), // Link to family for variations (e.g., different sizes of the same product)
-	suggestedRetailPrice: z.string().optional(), // Base suggested price (in base UoM)
+	productFamilyId: z.string().optional(),
+	suggestedRetailPrice: z.string().optional(),
 	defaultCost: z.string().optional(),
 	defaultCurrency: z.string().default("USD"),
 	prices: z.array(productPrice).optional(),
-	identifiers: z.array(productIdentifier).optional(), // For external IDs, useful for packages in CASE 2
+	identifiers: z.array(productIdentifier).optional(),
 });
 
 export const createProductCategory = z.object({
-	organizationId: z.string(),
 	code: z.string(),
 	name: z.string(),
 	description: z.string().optional(),
@@ -70,13 +68,12 @@ export const updateProductCategory = createProductCategory
 	.extend({
 		id: z.string(),
 	})
-	.partial({ organizationId: true, code: true, name: true });
+	.partial({ code: true, name: true });
 
 export const getProductStockSchema = z.object({
-	organizationId: z.string(),
 	productId: z.string(),
 	warehouseId: z.string().optional(),
-	uomCode: z.string().min(1).optional(), // Optional: return stock in this UoM
+	uomCode: z.string().min(1).optional(),
 });
 
 export type GetProductStockInput = z.infer<typeof getProductStockSchema>;

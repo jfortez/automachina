@@ -1,6 +1,6 @@
 import z from "zod";
 import { createCustomer, updateCustomer } from "@/dto/customer";
-import { publicProcedure, router } from "@/lib/trpc";
+import { protectedProcedure, publicProcedure, router } from "@/lib/trpc";
 import * as customerService from "@/services/customer";
 
 export const customerRouter = router({
@@ -8,13 +8,15 @@ export const customerRouter = router({
 	getById: publicProcedure
 		.input(z.string())
 		.query((opts) => customerService.getCustomerById(opts.input)),
-	create: publicProcedure
+	create: protectedProcedure
 		.input(createCustomer)
-		.mutation(({ input }) => customerService.createCustomer(input)),
-	update: publicProcedure
+		.mutation(({ input, ctx }) =>
+			customerService.createCustomer(input, ctx.organizationId),
+		),
+	update: protectedProcedure
 		.input(updateCustomer)
 		.mutation(({ input }) => customerService.updateCustomer(input)),
-	delete: publicProcedure
+	delete: protectedProcedure
 		.input(z.string())
 		.mutation(({ input }) => customerService.deleteCustomer(input)),
 });

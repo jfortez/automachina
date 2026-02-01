@@ -5,8 +5,8 @@ import * as warehouseService from "@/services/warehouse";
 
 const locationRouter = router({
 	getAll: publicProcedure.query(warehouseService.getWarehousesLocation),
-	getByOrg: protectedProcedure.input(z.string()).query(({ input }) => {
-		return warehouseService.getWarehouseLocationsByOrg(input);
+	getByOrg: protectedProcedure.query(({ ctx }) => {
+		return warehouseService.getWarehouseLocationsByOrg(ctx.organizationId);
 	}),
 	create: protectedProcedure
 		.input(createWarehouseLocation)
@@ -17,11 +17,13 @@ const locationRouter = router({
 
 export const warehouseRouter = router({
 	getAll: publicProcedure.query(warehouseService.getWarehouses),
-	getByOrg: protectedProcedure.input(z.string()).query(({ input }) => {
-		return warehouseService.getWarehouseByOrg(input);
+	getByOrg: protectedProcedure.query(({ ctx }) => {
+		return warehouseService.getWarehouseByOrg(ctx.organizationId);
 	}),
-	create: protectedProcedure.input(createWarehouse).mutation(({ input }) => {
-		return warehouseService.createWarehouse(input);
-	}),
+	create: protectedProcedure
+		.input(createWarehouse)
+		.mutation(({ input, ctx }) => {
+			return warehouseService.createWarehouse(input, ctx.organizationId);
+		}),
 	location: locationRouter,
 });

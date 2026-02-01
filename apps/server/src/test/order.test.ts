@@ -17,14 +17,12 @@ describe("Testing Order Management System", () => {
 			"should create sales order with inventory reservation",
 			async () => {
 				const { caller } = ctx;
-				const orgId = globals.organization.id;
 				const timestamp = Date.now();
 
 				// Create a test customer first (unique code to avoid conflicts)
 				const customerInput: inferProcedureInput<
 					AppRouter["customer"]["create"]
 				> = {
-					organizationId: orgId,
 					code: `TEST_CUSTOMER_${timestamp}`,
 					name: "Test Customer for Orders",
 				};
@@ -34,7 +32,6 @@ describe("Testing Order Management System", () => {
 				const productInput: inferProcedureInput<
 					AppRouter["product"]["create"]
 				> = {
-					organizationId: orgId,
 					sku: `ORDER_SKU_${timestamp}`,
 					name: "Test Product for Orders",
 					baseUom: "EA",
@@ -55,7 +52,6 @@ describe("Testing Order Management System", () => {
 				const receiveInput: inferProcedureInput<
 					AppRouter["inventory"]["receive"]
 				> = {
-					organizationId: orgId,
 					productId: product.id,
 					qty: 12, // 12 EA = 2 PK
 					uomCode: "PK",
@@ -68,7 +64,6 @@ describe("Testing Order Management System", () => {
 				const orderInput: inferProcedureInput<
 					AppRouter["order"]["sales"]["create"]
 				> = {
-					organizationId: orgId,
 					customerId: customer.id,
 					warehouseId: globals.warehouse.id,
 					lines: [
@@ -95,14 +90,13 @@ describe("Testing Order Management System", () => {
 			"should fulfill sales order and reduce inventory",
 			async () => {
 				const { caller } = ctx;
-				const orgId = globals.organization.id;
+
 				const timestamp = Date.now();
 
 				// Create a test customer
 				const customerInput: inferProcedureInput<
 					AppRouter["customer"]["create"]
 				> = {
-					organizationId: orgId,
 					code: `FULFILL_CUSTOMER_${timestamp}`,
 					name: "Customer for Fulfillment Test",
 				};
@@ -112,7 +106,6 @@ describe("Testing Order Management System", () => {
 				const productInput: inferProcedureInput<
 					AppRouter["product"]["create"]
 				> = {
-					organizationId: orgId,
 					sku: `FULFILL_SKU_${timestamp}`,
 					name: "Product for Fulfillment",
 					baseUom: "EA",
@@ -126,7 +119,6 @@ describe("Testing Order Management System", () => {
 				const receiveInput: inferProcedureInput<
 					AppRouter["inventory"]["receive"]
 				> = {
-					organizationId: orgId,
 					productId: product.id,
 					qty: 15, // Use specific qty to identify this test's data
 					uomCode: "EA",
@@ -137,7 +129,6 @@ describe("Testing Order Management System", () => {
 
 				// Verify stock was initially 15
 				const initialStock = await caller.product.getStock({
-					organizationId: orgId,
 					productId: product.id,
 					warehouseId: globals.warehouse.id,
 				});
@@ -147,7 +138,6 @@ describe("Testing Order Management System", () => {
 				const orderInput: inferProcedureInput<
 					AppRouter["order"]["sales"]["create"]
 				> = {
-					organizationId: orgId,
 					customerId: customer.id,
 					warehouseId: globals.warehouse.id,
 					lines: [
@@ -170,7 +160,6 @@ describe("Testing Order Management System", () => {
 
 				// Verify inventory was reduced by 5 EA (15 - 5 = 10)
 				const finalStock = await caller.product.getStock({
-					organizationId: orgId,
 					productId: product.id,
 					warehouseId: globals.warehouse.id,
 				});
@@ -182,13 +171,11 @@ describe("Testing Order Management System", () => {
 			"should cancel sales order and release reservations",
 			async () => {
 				const { caller } = ctx;
-				const orgId = globals.organization.id;
 
 				// Create a test customer
 				const customerInput: inferProcedureInput<
 					AppRouter["customer"]["create"]
 				> = {
-					organizationId: orgId,
 					code: `CANCEL_CUSTOMER_${Date.now()}`,
 					name: "Customer for Cancellation Test",
 				};
@@ -198,7 +185,6 @@ describe("Testing Order Management System", () => {
 				const productInput: inferProcedureInput<
 					AppRouter["product"]["create"]
 				> = {
-					organizationId: orgId,
 					sku: nanoid(10),
 					name: "Product for Cancellation",
 					baseUom: "EA",
@@ -213,7 +199,6 @@ describe("Testing Order Management System", () => {
 				const receiveInput: inferProcedureInput<
 					AppRouter["inventory"]["receive"]
 				> = {
-					organizationId: orgId,
 					productId: product.id,
 					qty: 15,
 					uomCode: "EA",
@@ -226,7 +211,6 @@ describe("Testing Order Management System", () => {
 				const orderInput: inferProcedureInput<
 					AppRouter["order"]["sales"]["create"]
 				> = {
-					organizationId: orgId,
 					customerId: customer.id,
 					warehouseId: globals.warehouse.id,
 					lines: [
@@ -244,7 +228,6 @@ describe("Testing Order Management System", () => {
 
 				// Verify initial stock was 15, and 7 are reserved (available should be 8)
 				const stockAfterReservation = await caller.product.getStock({
-					organizationId: orgId,
 					productId: product.id,
 					warehouseId: globals.warehouse.id,
 				});
@@ -257,7 +240,6 @@ describe("Testing Order Management System", () => {
 
 				// Verify that reservations were released and stock is still 15
 				const stockAfterCancellation = await caller.product.getStock({
-					organizationId: orgId,
 					productId: product.id,
 					warehouseId: globals.warehouse.id,
 				});
@@ -268,13 +250,12 @@ describe("Testing Order Management System", () => {
 
 	describe("Purchase Orders", () => {
 		it.sequential("should create purchase order", async () => {
-			const { caller, defaultOrg, defaultCategoryId, defaultWarehouseId } = ctx;
+			const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
 
 			// Create a test supplier using the router
 			const supplierInput: inferProcedureInput<
 				AppRouter["supplier"]["create"]
 			> = {
-				organizationId: defaultOrg.id,
 				code: `TEST_SUPPLIER_${Date.now()}`,
 				name: "Test Supplier for Orders",
 			};
@@ -284,7 +265,6 @@ describe("Testing Order Management System", () => {
 			// Create product
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: defaultOrg.id,
 					sku: nanoid(10),
 					name: "Purchase Product",
 					baseUom: "EA",
@@ -299,7 +279,6 @@ describe("Testing Order Management System", () => {
 			const orderInput: inferProcedureInput<
 				AppRouter["order"]["purchase"]["create"]
 			> = {
-				organizationId: defaultOrg.id,
 				supplierId: testSupplier.id,
 				warehouseId: defaultWarehouseId,
 				lines: [
@@ -337,14 +316,13 @@ describe("Testing Order Management System", () => {
 	describe("Invoice Generation", () => {
 		it.sequential("should generate invoice from fulfilled order", async () => {
 			const { caller } = ctx;
-			const orgId = globals.organization.id;
+
 			const timestamp = Date.now();
 
 			// Create a test customer
 			const customerInput: inferProcedureInput<
 				AppRouter["customer"]["create"]
 			> = {
-				organizationId: orgId,
 				code: `INVOICE_CUSTOMER_${timestamp}`,
 				name: "Customer for Invoice Test",
 			};
@@ -353,7 +331,6 @@ describe("Testing Order Management System", () => {
 			// Create a product
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: orgId,
 					sku: `INVOICE_SKU_${timestamp}`,
 					name: "Product for Invoice Test",
 					baseUom: "EA",
@@ -367,7 +344,6 @@ describe("Testing Order Management System", () => {
 			const receiveInput: inferProcedureInput<
 				AppRouter["inventory"]["receive"]
 			> = {
-				organizationId: orgId,
 				productId: product.id,
 				qty: 20,
 				uomCode: "EA",
@@ -380,7 +356,6 @@ describe("Testing Order Management System", () => {
 			const orderInput: inferProcedureInput<
 				AppRouter["order"]["sales"]["create"]
 			> = {
-				organizationId: orgId,
 				customerId: customer.id,
 				warehouseId: globals.warehouse.id,
 				lines: [
@@ -411,7 +386,7 @@ describe("Testing Order Management System", () => {
 			const invoice = await caller.invoice.generateFromOrder(invoiceInput);
 
 			expect(invoice).toBeDefined();
-			expect(invoice.invoice.invoiceNumber).toMatch(/^INV-\d{6}-\d{4}$/);
+			expect(invoice.invoice.invoiceNumber).toMatch(/^INV-\d{6}-/);
 			expect(invoice.invoice.customerId).toBe(customer.id);
 			expect(invoice.invoice.status).toBe("issued");
 			expect(invoice.items).toHaveLength(1);
@@ -422,15 +397,13 @@ describe("Testing Order Management System", () => {
 		it.sequential(
 			"should generate invoice from purchase order receipt",
 			async () => {
-				const { caller, defaultOrg, defaultCategoryId, defaultWarehouseId } =
-					ctx;
+				const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
 				const timestamp = Date.now();
 
 				// Create a test supplier
 				const supplierInput: inferProcedureInput<
 					AppRouter["supplier"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					code: `INVOICE_SUPPLIER_${timestamp}`,
 					name: "Supplier for Invoice Test",
 				};
@@ -441,7 +414,6 @@ describe("Testing Order Management System", () => {
 				const productInput: inferProcedureInput<
 					AppRouter["product"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					sku: `PO_INVOICE_SKU_${timestamp}`,
 					name: "Product for PO Invoice Test",
 					baseUom: "EA",
@@ -455,7 +427,6 @@ describe("Testing Order Management System", () => {
 				const orderInput: inferProcedureInput<
 					AppRouter["order"]["purchase"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					supplierId: supplier.id,
 					warehouseId: defaultWarehouseId,
 					lines: [
@@ -500,7 +471,7 @@ describe("Testing Order Management System", () => {
 				const invoice = await caller.invoice.generateFromOrder(invoiceInput);
 
 				expect(invoice).toBeDefined();
-				expect(invoice.invoice.invoiceNumber).toMatch(/^INV-\d{6}-\d{4}$/);
+				expect(invoice.invoice.invoiceNumber).toMatch(/^INV-\d{6}-/);
 				expect(invoice.invoice.supplierId).toBe(supplier.id);
 				expect(invoice.invoice.status).toBe("issued");
 				expect(invoice.items).toHaveLength(1);

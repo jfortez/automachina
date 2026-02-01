@@ -1,8 +1,6 @@
 import { z } from "zod";
 
-// Supplier DTOs
 export const createSupplier = z.object({
-	organizationId: z.string().uuid(),
 	code: z.string().min(1),
 	name: z.string().min(1),
 	image: z.string().optional(),

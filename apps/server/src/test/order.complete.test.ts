@@ -15,13 +15,11 @@ describe("Testing Extended Order Management System", () => {
 	describe("Sales Order Extended Operations", () => {
 		it.sequential("should get sales order by ID - existing order", async () => {
 			const { caller } = ctx;
-			const orgId = globals.organization.id;
 
 			// Create customer
 			const customerInput: inferProcedureInput<
 				AppRouter["customer"]["create"]
 			> = {
-				organizationId: orgId,
 				code: `GET_SO_CUST_${Date.now()}`,
 				name: "Customer for Get SO Test",
 			};
@@ -30,7 +28,6 @@ describe("Testing Extended Order Management System", () => {
 			// Create product
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: orgId,
 					sku: `GET_SO_SKU_${Date.now()}`,
 					name: "Product for Get SO Test",
 					baseUom: "EA",
@@ -42,7 +39,6 @@ describe("Testing Extended Order Management System", () => {
 
 			// Add stock
 			await caller.inventory.receive({
-				organizationId: orgId,
 				productId: product.id,
 				qty: 20,
 				uomCode: "EA",
@@ -54,7 +50,6 @@ describe("Testing Extended Order Management System", () => {
 			const orderInput: inferProcedureInput<
 				AppRouter["order"]["sales"]["create"]
 			> = {
-				organizationId: orgId,
 				customerId: customer.id,
 				warehouseId: globals.warehouse.id,
 				lines: [
@@ -95,11 +90,9 @@ describe("Testing Extended Order Management System", () => {
 
 		it.sequential("should list sales orders with filters", async () => {
 			const { caller } = ctx;
-			const orgId = globals.organization.id;
 
 			// Get initial count
 			const initialList = await caller.order.sales.list({
-				organizationId: orgId,
 				page: 1,
 				limit: 10,
 			});
@@ -110,7 +103,6 @@ describe("Testing Extended Order Management System", () => {
 			const customer1Input: inferProcedureInput<
 				AppRouter["customer"]["create"]
 			> = {
-				organizationId: orgId,
 				code: `LIST_SO_CUST1_${Date.now()}`,
 				name: "Customer 1 for List SO Test",
 			};
@@ -119,7 +111,6 @@ describe("Testing Extended Order Management System", () => {
 			const customer2Input: inferProcedureInput<
 				AppRouter["customer"]["create"]
 			> = {
-				organizationId: orgId,
 				code: `LIST_SO_CUST2_${Date.now()}`,
 				name: "Customer 2 for List SO Test",
 			};
@@ -128,7 +119,6 @@ describe("Testing Extended Order Management System", () => {
 			// Create product
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: orgId,
 					sku: `LIST_SO_SKU_${Date.now()}`,
 					name: "Product for List SO Test",
 					baseUom: "EA",
@@ -140,7 +130,6 @@ describe("Testing Extended Order Management System", () => {
 
 			// Add stock
 			await caller.inventory.receive({
-				organizationId: orgId,
 				productId: product.id,
 				qty: 40,
 				uomCode: "EA",
@@ -152,7 +141,6 @@ describe("Testing Extended Order Management System", () => {
 			const orderInput1: inferProcedureInput<
 				AppRouter["order"]["sales"]["create"]
 			> = {
-				organizationId: orgId,
 				customerId: customer1.id,
 				warehouseId: globals.warehouse.id,
 				lines: [
@@ -169,7 +157,6 @@ describe("Testing Extended Order Management System", () => {
 			const orderInput2: inferProcedureInput<
 				AppRouter["order"]["sales"]["create"]
 			> = {
-				organizationId: orgId,
 				customerId: customer2.id,
 				warehouseId: globals.warehouse.id,
 				lines: [
@@ -185,7 +172,6 @@ describe("Testing Extended Order Management System", () => {
 
 			// List all orders
 			const allOrders = await caller.order.sales.list({
-				organizationId: orgId,
 				page: 1,
 				limit: 10,
 			});
@@ -194,7 +180,6 @@ describe("Testing Extended Order Management System", () => {
 
 			// Filter by customer
 			const customerOrders = await caller.order.sales.list({
-				organizationId: orgId,
 				customerId: customer1.id,
 				page: 1,
 				limit: 10,
@@ -205,7 +190,6 @@ describe("Testing Extended Order Management System", () => {
 
 			// Filter by status
 			const openOrders = await caller.order.sales.list({
-				organizationId: orgId,
 				status: "open",
 				page: 1,
 				limit: 10,
@@ -217,10 +201,8 @@ describe("Testing Extended Order Management System", () => {
 
 		it.sequential("should list sales orders with pagination", async () => {
 			const { caller } = ctx;
-			const orgId = globals.organization.id;
 
 			const paginatedList = await caller.order.sales.list({
-				organizationId: orgId,
 				page: 1,
 				limit: 2,
 			});
@@ -234,13 +216,11 @@ describe("Testing Extended Order Management System", () => {
 			"should update sales order - valid update before fulfillment",
 			async () => {
 				const { caller } = ctx;
-				const orgId = globals.organization.id;
 
 				// Create customer
 				const customerInput: inferProcedureInput<
 					AppRouter["customer"]["create"]
 				> = {
-					organizationId: orgId,
 					code: `UPDATE_SO_CUST_${Date.now()}`,
 					name: "Customer for Update SO Test",
 				};
@@ -250,7 +230,6 @@ describe("Testing Extended Order Management System", () => {
 				const productInput: inferProcedureInput<
 					AppRouter["product"]["create"]
 				> = {
-					organizationId: orgId,
 					sku: `UPDATE_SO_SKU_${Date.now()}`,
 					name: "Product for Update SO Test",
 					baseUom: "EA",
@@ -261,7 +240,6 @@ describe("Testing Extended Order Management System", () => {
 				const product = await caller.product.create(productInput);
 
 				await caller.inventory.receive({
-					organizationId: orgId,
 					productId: product.id,
 					qty: 30,
 					uomCode: "EA",
@@ -273,7 +251,6 @@ describe("Testing Extended Order Management System", () => {
 				const orderInput: inferProcedureInput<
 					AppRouter["order"]["sales"]["create"]
 				> = {
-					organizationId: orgId,
 					customerId: customer.id,
 					warehouseId: globals.warehouse.id,
 					lines: [
@@ -305,13 +282,11 @@ describe("Testing Extended Order Management System", () => {
 			"should update sales order - invalid update after fulfillment",
 			async () => {
 				const { caller } = ctx;
-				const orgId = globals.organization.id;
 
 				// Create order, fulfill it, then try to update
 				const customerInput: inferProcedureInput<
 					AppRouter["customer"]["create"]
 				> = {
-					organizationId: orgId,
 					code: `UPDATE_FAIL_SO_CUST_${Date.now()}`,
 					name: "Customer for Update Fail SO Test",
 				};
@@ -320,7 +295,6 @@ describe("Testing Extended Order Management System", () => {
 				const productInput: inferProcedureInput<
 					AppRouter["product"]["create"]
 				> = {
-					organizationId: orgId,
 					sku: `UPDATE_FAIL_SO_SKU_${Date.now()}`,
 					name: "Product for Update Fail SO Test",
 					baseUom: "EA",
@@ -331,7 +305,6 @@ describe("Testing Extended Order Management System", () => {
 				const product = await caller.product.create(productInput);
 
 				await caller.inventory.receive({
-					organizationId: orgId,
 					productId: product.id,
 					qty: 20,
 					uomCode: "EA",
@@ -342,7 +315,6 @@ describe("Testing Extended Order Management System", () => {
 				const orderInput: inferProcedureInput<
 					AppRouter["order"]["sales"]["create"]
 				> = {
-					organizationId: orgId,
 					customerId: customer.id,
 					warehouseId: globals.warehouse.id,
 					lines: [
@@ -374,14 +346,12 @@ describe("Testing Extended Order Management System", () => {
 		it.sequential(
 			"should get purchase order by ID - existing order",
 			async () => {
-				const { caller, defaultOrg, defaultCategoryId, defaultWarehouseId } =
-					ctx;
+				const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
 
 				// Create supplier
 				const supplierInput: inferProcedureInput<
 					AppRouter["supplier"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					code: `GET_PO_SUPP_${Date.now()}`,
 					name: "Supplier for Get PO Test",
 				};
@@ -391,7 +361,6 @@ describe("Testing Extended Order Management System", () => {
 				const productInput: inferProcedureInput<
 					AppRouter["product"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					sku: `GET_PO_SKU_${Date.now()}`,
 					name: "Product for Get PO Test",
 					baseUom: "EA",
@@ -405,7 +374,6 @@ describe("Testing Extended Order Management System", () => {
 				const orderInput: inferProcedureInput<
 					AppRouter["order"]["purchase"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					supplierId: supplier.id,
 					warehouseId: defaultWarehouseId,
 					lines: [
@@ -446,11 +414,10 @@ describe("Testing Extended Order Management System", () => {
 		);
 
 		it.sequential("should list purchase orders with filters", async () => {
-			const { caller, defaultOrg, defaultCategoryId, defaultWarehouseId } = ctx;
+			const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
 
 			// Get initial count
 			const initialList = await caller.order.purchase.list({
-				organizationId: defaultOrg.id,
 				page: 1,
 				limit: 10,
 			});
@@ -461,7 +428,6 @@ describe("Testing Extended Order Management System", () => {
 			const supplier1Input: inferProcedureInput<
 				AppRouter["supplier"]["create"]
 			> = {
-				organizationId: defaultOrg.id,
 				code: `LIST_PO_SUPP1_${Date.now()}`,
 				name: "Supplier 1 for List PO Test",
 			};
@@ -470,7 +436,6 @@ describe("Testing Extended Order Management System", () => {
 			const supplier2Input: inferProcedureInput<
 				AppRouter["supplier"]["create"]
 			> = {
-				organizationId: defaultOrg.id,
 				code: `LIST_PO_SUPP2_${Date.now()}`,
 				name: "Supplier 2 for List PO Test",
 			};
@@ -479,7 +444,6 @@ describe("Testing Extended Order Management System", () => {
 			// Create product
 			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
 				{
-					organizationId: defaultOrg.id,
 					sku: `LIST_PO_SKU_${Date.now()}`,
 					name: "Product for List PO Test",
 					baseUom: "EA",
@@ -493,7 +457,6 @@ describe("Testing Extended Order Management System", () => {
 			const orderInput1: inferProcedureInput<
 				AppRouter["order"]["purchase"]["create"]
 			> = {
-				organizationId: defaultOrg.id,
 				supplierId: supplier1.id,
 				warehouseId: defaultWarehouseId,
 				lines: [
@@ -510,7 +473,6 @@ describe("Testing Extended Order Management System", () => {
 			const orderInput2: inferProcedureInput<
 				AppRouter["order"]["purchase"]["create"]
 			> = {
-				organizationId: defaultOrg.id,
 				supplierId: supplier2.id,
 				warehouseId: defaultWarehouseId,
 				lines: [
@@ -526,7 +488,6 @@ describe("Testing Extended Order Management System", () => {
 
 			// List all purchase orders
 			const allOrders = await caller.order.purchase.list({
-				organizationId: defaultOrg.id,
 				page: 1,
 				limit: 10,
 			});
@@ -535,7 +496,6 @@ describe("Testing Extended Order Management System", () => {
 
 			// Filter by supplier
 			const supplierOrders = await caller.order.purchase.list({
-				organizationId: defaultOrg.id,
 				supplierId: supplier1.id,
 				page: 1,
 				limit: 10,
@@ -546,7 +506,6 @@ describe("Testing Extended Order Management System", () => {
 
 			// Filter by status
 			const openOrders = await caller.order.purchase.list({
-				organizationId: defaultOrg.id,
 				status: "open",
 				page: 1,
 				limit: 10,
@@ -557,10 +516,9 @@ describe("Testing Extended Order Management System", () => {
 		});
 
 		it.sequential("should list purchase orders with pagination", async () => {
-			const { caller, defaultOrg } = ctx;
+			const { caller } = ctx;
 
 			const paginatedList = await caller.order.purchase.list({
-				organizationId: defaultOrg.id,
 				page: 1,
 				limit: 2,
 			});
@@ -573,14 +531,12 @@ describe("Testing Extended Order Management System", () => {
 		it.sequential(
 			"should update purchase order - valid update before receipt",
 			async () => {
-				const { caller, defaultOrg, defaultCategoryId, defaultWarehouseId } =
-					ctx;
+				const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
 
 				// Create supplier
 				const supplierInput: inferProcedureInput<
 					AppRouter["supplier"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					code: `UPDATE_PO_SUPP_${Date.now()}`,
 					name: "Supplier for Update PO Test",
 				};
@@ -590,7 +546,6 @@ describe("Testing Extended Order Management System", () => {
 				const productInput: inferProcedureInput<
 					AppRouter["product"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					sku: `UPDATE_PO_SKU_${Date.now()}`,
 					name: "Product for Update PO Test",
 					baseUom: "EA",
@@ -604,7 +559,6 @@ describe("Testing Extended Order Management System", () => {
 				const orderInput: inferProcedureInput<
 					AppRouter["order"]["purchase"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					supplierId: supplier.id,
 					warehouseId: defaultWarehouseId,
 					lines: [
@@ -636,14 +590,12 @@ describe("Testing Extended Order Management System", () => {
 		it.sequential(
 			"should update purchase order - invalid update after receipt",
 			async () => {
-				const { caller, defaultOrg, defaultCategoryId, defaultWarehouseId } =
-					ctx;
+				const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
 
 				// Create supplier
 				const supplierInput: inferProcedureInput<
 					AppRouter["supplier"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					code: `UPDATE_FAIL_PO_SUPP_${Date.now()}`,
 					name: "Supplier for Update Fail PO Test",
 				};
@@ -653,7 +605,6 @@ describe("Testing Extended Order Management System", () => {
 				const productInput: inferProcedureInput<
 					AppRouter["product"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					sku: `UPDATE_FAIL_PO_SKU_${Date.now()}`,
 					name: "Product for Update Fail PO Test",
 					baseUom: "EA",
@@ -667,7 +618,6 @@ describe("Testing Extended Order Management System", () => {
 				const orderInput: inferProcedureInput<
 					AppRouter["order"]["purchase"]["create"]
 				> = {
-					organizationId: defaultOrg.id,
 					supplierId: supplier.id,
 					warehouseId: defaultWarehouseId,
 					lines: [

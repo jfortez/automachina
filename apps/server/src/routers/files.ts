@@ -8,12 +8,11 @@ export const fileRouter = router({
 	uploadConfig: protectedProcedure
 		.input(
 			z.object({
-				organizationId: z.string(),
-				bucket: z.string().optional(), // Defaults to organizationId
+				bucket: z.string().optional(), // Defaults to organizationId from context
 			}),
 		)
-		.query(async ({ input }) => {
-			const bucket = input.bucket || input.organizationId;
+		.query(async ({ input, ctx }) => {
+			const bucket = input.bucket || ctx.organizationId;
 
 			// Ensure bucket exists
 			await createBucket(bucket);
@@ -27,13 +26,12 @@ export const fileRouter = router({
 	delete: protectedProcedure
 		.input(
 			z.object({
-				organizationId: z.string(),
 				bucket: z.string().optional(),
 				key: z.string(),
 			}),
 		)
-		.mutation(async ({ input }) => {
-			const bucket = input.bucket || input.organizationId;
+		.mutation(async ({ input, ctx }) => {
+			const bucket = input.bucket || ctx.organizationId;
 
 			try {
 				await s3.send(

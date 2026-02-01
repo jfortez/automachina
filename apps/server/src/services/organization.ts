@@ -196,10 +196,7 @@ const getActiveOrganization = async (userId: string) => {
 	});
 
 	if (!organization) {
-		throw new TRPCError({
-			code: "NOT_FOUND",
-			message: "User is not a member of any organization",
-		});
+		return null;
 	}
 
 	return organization;

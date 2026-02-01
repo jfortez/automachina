@@ -31,7 +31,6 @@ describe("Testing Product Route", () => {
 			const newCategory = {
 				code: "NEW_CATEGORY",
 				name: "New Category",
-				organizationId: ctx.defaultOrg.id,
 			};
 			const [createdCategory] =
 				await ctx.caller.product.category.create(newCategory);
@@ -102,7 +101,6 @@ describe("Testing Product Route", () => {
 			attributes: {
 				foo: "bar",
 			},
-			organizationId: ctx.defaultOrg.id,
 			categoryId: ctx.defaultCategoryId,
 			trackingLevel: "none",
 		};
@@ -123,7 +121,6 @@ describe("Testing Product Route", () => {
 					uomCode: "PK",
 				},
 			],
-			organizationId: ctx.defaultOrg.id,
 			categoryId: ctx.defaultCategoryId,
 		};
 
@@ -159,7 +156,6 @@ describe("Testing Product Route", () => {
 			name: faker.commerce.productName(),
 			description: faker.commerce.productDescription(),
 			sku: nanoid(10),
-			organizationId: ctx.defaultOrg.id,
 			categoryId: ctx.defaultCategoryId,
 		};
 
@@ -191,7 +187,6 @@ describe("Testing Product Route", () => {
 			name: "THIS IS A SERVICE",
 			description: "THIS IS A SERVICE PRODUCT",
 			sku: nanoid(10),
-			organizationId: ctx.defaultOrg.id,
 			categoryId: ctx.defaultCategoryId,
 			isPhysical: false,
 		};
@@ -215,7 +210,6 @@ describe("Testing Product Route", () => {
 	it.sequential("get product stock with breakdown", async () => {
 		// First create a product with packaging UoM
 		const productInput: inferProcedureInput<AppRouter["product"]["create"]> = {
-			organizationId: ctx.defaultOrg.id,
 			sku: nanoid(10),
 			name: "Product with Packaging Breakdown",
 			baseUom: "EA",
@@ -235,7 +229,6 @@ describe("Testing Product Route", () => {
 		// Add 25 EA stock (4 PK complete + 1 EA remaining = 25 EA)
 		const receiveInput: inferProcedureInput<AppRouter["inventory"]["receive"]> =
 			{
-				organizationId: ctx.defaultOrg.id,
 				productId: createdProduct.id,
 				qty: 4,
 				uomCode: "PK", // Receive 4 PK = 24 EA
@@ -246,7 +239,6 @@ describe("Testing Product Route", () => {
 		const receiveInput2: inferProcedureInput<
 			AppRouter["inventory"]["receive"]
 		> = {
-			organizationId: ctx.defaultOrg.id,
 			productId: createdProduct.id,
 			qty: 1,
 			uomCode: "EA", // Receive additional 1 EA
@@ -255,7 +247,6 @@ describe("Testing Product Route", () => {
 		await ctx.caller.inventory.receive(receiveInput2);
 
 		const stockWithBreakdown = await ctx.caller.product.getStock({
-			organizationId: ctx.defaultOrg.id,
 			productId: createdProduct.id,
 			uomCode: "PK", // Request in packaging UoM
 		});
@@ -272,7 +263,6 @@ describe("Testing Product Route", () => {
 
 		// Test getting stock in base UoM (no breakdown)
 		const stockBaseUom = await ctx.caller.product.getStock({
-			organizationId: ctx.defaultOrg.id,
 			productId: createdProduct.id,
 			uomCode: "EA", // Request in base UoM
 		});
@@ -286,7 +276,6 @@ describe("Testing Product Route", () => {
 
 		// Test getting stock with no specific UoM (default behavior)
 		const stockDefault = await ctx.caller.product.getStock({
-			organizationId: ctx.defaultOrg.id,
 			productId: createdProduct.id,
 		});
 

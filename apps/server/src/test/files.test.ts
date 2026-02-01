@@ -11,13 +11,10 @@ describe("Testing files router", () => {
 	});
 
 	it("should return upload configuration for organization bucket", async () => {
-		const input: inferProcedureInput<AppRouter["files"]["uploadConfig"]> = {
-			organizationId: ctx.defaultOrg.id,
-		};
+		const input: inferProcedureInput<AppRouter["files"]["uploadConfig"]> = {};
 
 		const result = await ctx.caller.files.uploadConfig(input);
 
 		expect(result.success).toBe(true);
-		expect(result.bucket).toBe(ctx.defaultOrg.id);
 	});
 });

@@ -13,12 +13,11 @@ import { protectedProcedure, router } from "@/lib/trpc";
 import * as orderServices from "@/services/order";
 
 export const orderRouter = router({
-	// Sales Orders
 	sales: router({
 		create: protectedProcedure
 			.input(createSalesOrderSchema)
-			.mutation(async ({ input }) => {
-				return orderServices.createSalesOrder(input);
+			.mutation(async ({ input, ctx }) => {
+				return orderServices.createSalesOrder(input, ctx.organizationId);
 			}),
 
 		getById: protectedProcedure
@@ -29,8 +28,8 @@ export const orderRouter = router({
 
 		list: protectedProcedure
 			.input(listSalesOrdersSchema)
-			.query(async ({ input }) => {
-				return orderServices.getSalesOrders(input);
+			.query(async ({ input, ctx }) => {
+				return orderServices.getSalesOrders(input, ctx.organizationId);
 			}),
 
 		update: protectedProcedure
@@ -53,8 +52,8 @@ export const orderRouter = router({
 	purchase: router({
 		create: protectedProcedure
 			.input(createPurchaseOrderSchema)
-			.mutation(async ({ input }) => {
-				return orderServices.createPurchaseOrder(input);
+			.mutation(async ({ input, ctx }) => {
+				return orderServices.createPurchaseOrder(input, ctx.organizationId);
 			}),
 
 		getById: protectedProcedure
@@ -65,8 +64,8 @@ export const orderRouter = router({
 
 		list: protectedProcedure
 			.input(listPurchaseOrdersSchema)
-			.query(async ({ input }) => {
-				return orderServices.getPurchaseOrders(input);
+			.query(async ({ input, ctx }) => {
+				return orderServices.getPurchaseOrders(input, ctx.organizationId);
 			}),
 
 		update: protectedProcedure

@@ -27,8 +27,8 @@ export const invoiceRouter = router({
 	// List invoices with pagination and filters
 	list: protectedProcedure
 		.input(listInvoicesSchema)
-		.query(async ({ input }) => {
-			return invoiceService.getInvoices(input);
+		.query(async ({ input, ctx }) => {
+			return invoiceService.getInvoices(input, ctx.organizationId);
 		}),
 
 	// Update invoice (limited operations)

@@ -1,7 +1,6 @@
 import { string, z } from "zod";
 
 export const createCustomer = z.object({
-	organizationId: z.string(),
 	code: z.string(),
 	name: z.string(),
 	contactInfo: z.object().optional(),

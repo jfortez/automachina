@@ -1,25 +1,18 @@
 import { z } from "zod";
+import { warehouseLocations } from "@/db/schema/warehouse";
 
 export const createWarehouse = z.object({
 	name: z.string().min(2).max(100),
 	code: z.string().min(2).max(100),
 	address: z.string().min(2).max(200),
-	organizationId: z.string(),
 });
 
 export const createWarehouseLocation = z.object({
 	warehouseId: z.string(),
 	code: z.string().min(2).max(100),
-	type: z.enum([
-		"storage",
-		"staging_in",
-		"staging_out",
-		"qc_hold",
-		"damaged",
-		"returns",
-	]),
-	temperatureMin: z.number().optional(),
-	temperatureMax: z.number().optional(),
+	type: z.enum(warehouseLocations),
+	temperatureMin: z.coerce.string().optional(),
+	temperatureMax: z.coerce.string().optional(),
 	attributes: z.object({}).optional(),
 });
 

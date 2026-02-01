@@ -22,7 +22,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useActiveOrganization } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc";
 
 export const Route = createFileRoute("/_auth/customer/")({
@@ -33,7 +32,6 @@ function CustomerPage() {
 	const { data: customers, isLoading } = useQuery(
 		trpc.customer.getAll.queryOptions(),
 	);
-	const { data: activeOrg } = useActiveOrganization();
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const client = useQueryClient();
 
@@ -56,14 +54,9 @@ function CustomerPage() {
 			code: "",
 		},
 		onSubmit: async ({ value }) => {
-			if (!activeOrg?.id) {
-				toast.error("No active organization");
-				return;
-			}
 			await createCustomerMutation.mutateAsync({
 				name: value.name,
 				code: value.code,
-				organizationId: activeOrg.id,
 			});
 		},
 	});
