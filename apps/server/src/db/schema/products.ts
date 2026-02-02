@@ -188,6 +188,20 @@ export const priceListTypes = [
 	"internal",
 ] as const;
 
+export type DiscountConditions = {
+	minQty?: number;
+	maxQty?: number;
+	uomCodes?: string[];
+	minOrderTotal?: number;
+	daysOfWeek?: string[];
+	tiers?: Array<{
+		minQty: number;
+		maxQty?: number;
+		discount: number;
+		type: "percentage" | "fixed";
+	}>;
+};
+
 export const discountTypes = [
 	"percentage",
 	"fixed",
@@ -267,7 +281,10 @@ export const discountRule = pgTable(
 		currency: text("currency").notNull().default("USD"),
 		appliesTo: text("applies_to", { enum: discountAppliesTo }).notNull(),
 		appliesToId: uuid("applies_to_id"),
-		conditions: jsonb("conditions").notNull().default(sql`'{}'::jsonb`),
+		conditions: jsonb("conditions")
+			.$type<DiscountConditions>()
+			.notNull()
+			.default(sql`'{}'::jsonb`),
 		combinable: boolean("combinable").notNull().default(false),
 		startAt: timestamp("start_at"),
 		endAt: timestamp("end_at"),
