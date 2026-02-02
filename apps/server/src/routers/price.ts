@@ -98,8 +98,8 @@ export const priceRouter = router({
 
 		calculate: protectedProcedure
 			.input(calculateDiscount)
-			.query(({ input }) => {
-				return priceServices.calculateDiscount(input);
+			.query(({ input, ctx }) => {
+				return priceServices.calculateDiscount(input, ctx.organizationId);
 			}),
 	}),
 });

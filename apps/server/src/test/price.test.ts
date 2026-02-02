@@ -1,6 +1,6 @@
 import type { inferProcedureInput } from "@trpc/server";
 import { nanoid } from "nanoid";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AppRouter } from "@/routers";
 import { formatNumeric, setupTestContext } from "./util";
 
@@ -975,5 +975,642 @@ describe("Testing Price Route", () => {
 				expect(result.appliedRules).toHaveLength(2);
 			},
 		);
+	});
+
+	describe("Tiered Discounts", () => {
+		let testCategoryId: string;
+		let productId: string;
+
+		beforeAll(async () => {
+			// Desactivar todos los descuentos globales existentes para evitar interferencias
+			const existingRules = await ctx.caller.price.discount.getAll();
+			for (const rule of existingRules) {
+				if (rule.appliesTo === "global" && rule.isActive) {
+					await ctx.caller.price.discount.update({
+						id: rule.id,
+						isActive: false,
+					});
+				}
+			}
+
+			const categoryInput: inferProcedureInput<
+				AppRouter["product"]["category"]["create"]
+			> = {
+				code: `TIERED_CAT_${nanoid(5)}`,
+				name: "Test Category for Tiered Discounts",
+			};
+			const [category] =
+				await ctx.caller.product.category.create(categoryInput);
+			testCategoryId = category.id;
+
+			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
+				{
+					sku: `TIERED_PROD_${nanoid(5)}`,
+					name: "Product for Tiered Discounts",
+					categoryId: testCategoryId,
+					baseUom: "EA",
+					prices: [
+						{
+							uomCode: "EA",
+							price: 100,
+							currency: "USD",
+						},
+					],
+				};
+			const product = await ctx.caller.product.create(productInput);
+			productId = product.id;
+		});
+
+		it.sequential("should apply tiered discount - tier 1", async () => {
+			const tieredDiscountInput: inferProcedureInput<
+				AppRouter["price"]["discount"]["create"]
+			> = {
+				code: `TIERED_${nanoid(5)}`,
+				name: "Tiered Discount",
+				type: "tiered",
+				value: 0,
+				currency: "USD",
+				appliesTo: "global",
+				conditions: {
+					tiers: [
+						{ minQty: 1, maxQty: 10, discount: 5, type: "percentage" },
+						{ minQty: 11, maxQty: 50, discount: 10, type: "percentage" },
+						{ minQty: 51, discount: 15, type: "percentage" },
+					],
+				},
+				combinable: false,
+			};
+			await ctx.caller.price.discount.create(tieredDiscountInput);
+
+			const calcInput: inferProcedureInput<
+				AppRouter["price"]["discount"]["calculate"]
+			> = {
+				productId: productId,
+				basePrice: 100,
+				qty: 5,
+				uomCode: "EA",
+			};
+			const result = await ctx.caller.price.discount.calculate(calcInput);
+
+			expect(result).toBeDefined();
+			expect(result.originalPrice).toBe(100);
+			expect(result.discountAmount).toBe(5);
+			expect(result.finalPrice).toBe(95);
+		});
+
+		it.sequential("should apply tiered discount - tier 2", async () => {
+			const calcInput: inferProcedureInput<
+				AppRouter["price"]["discount"]["calculate"]
+			> = {
+				productId: productId,
+				basePrice: 100,
+				qty: 25,
+				uomCode: "EA",
+			};
+			const result = await ctx.caller.price.discount.calculate(calcInput);
+
+			expect(result).toBeDefined();
+			expect(result.discountAmount).toBe(10);
+			expect(result.finalPrice).toBe(90);
+		});
+
+		it.sequential("should apply tiered discount - tier 3", async () => {
+			const calcInput: inferProcedureInput<
+				AppRouter["price"]["discount"]["calculate"]
+			> = {
+				productId: productId,
+				basePrice: 100,
+				qty: 60,
+				uomCode: "EA",
+			};
+			const result = await ctx.caller.price.discount.calculate(calcInput);
+
+			expect(result).toBeDefined();
+			expect(result.discountAmount).toBe(15);
+			expect(result.finalPrice).toBe(85);
+		});
+	});
+
+	describe("Discount with Conditions", () => {
+		let testCategoryId: string;
+		let productId: string;
+
+		beforeAll(async () => {
+			// Desactivar todos los descuentos globales existentes para evitar interferencias
+			const existingRules = await ctx.caller.price.discount.getAll();
+			for (const rule of existingRules) {
+				if (rule.appliesTo === "global" && rule.isActive) {
+					await ctx.caller.price.discount.update({
+						id: rule.id,
+						isActive: false,
+					});
+				}
+			}
+
+			const categoryInput: inferProcedureInput<
+				AppRouter["product"]["category"]["create"]
+			> = {
+				code: `COND_CAT_${nanoid(5)}`,
+				name: "Test Category for Conditions",
+			};
+			const [category] =
+				await ctx.caller.product.category.create(categoryInput);
+			testCategoryId = category.id;
+
+			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
+				{
+					sku: `COND_PROD_${nanoid(5)}`,
+					name: "Product for Conditions",
+					categoryId: testCategoryId,
+					baseUom: "EA",
+					productUoms: [
+						{
+							uomCode: "PK",
+							qtyInBase: "10",
+						},
+					],
+					prices: [
+						{
+							uomCode: "EA",
+							price: 100,
+							currency: "USD",
+						},
+						{
+							uomCode: "PK",
+							price: 900,
+							currency: "USD",
+						},
+					],
+				};
+			const product = await ctx.caller.product.create(productInput);
+			productId = product.id;
+		});
+
+		it.sequential(
+			"should not apply discount when qty is below minQty",
+			async () => {
+				const discountInput: inferProcedureInput<
+					AppRouter["price"]["discount"]["create"]
+				> = {
+					code: `COND_MIN_${nanoid(5)}`,
+					name: "Min Quantity Discount",
+					type: "percentage",
+					value: 15,
+					currency: "USD",
+					appliesTo: "global",
+					conditions: {
+						minQty: 10,
+					},
+					combinable: false,
+				};
+				await ctx.caller.price.discount.create(discountInput);
+
+				const calcInput: inferProcedureInput<
+					AppRouter["price"]["discount"]["calculate"]
+				> = {
+					productId: productId,
+					basePrice: 100,
+					qty: 5,
+					uomCode: "EA",
+				};
+				const result = await ctx.caller.price.discount.calculate(calcInput);
+
+				expect(result).toBeDefined();
+				expect(result.discountAmount).toBe(0);
+				expect(result.finalPrice).toBe(100);
+				expect(result.appliedRules).toHaveLength(0);
+			},
+		);
+
+		it.sequential("should apply discount when qty meets minQty", async () => {
+			const calcInput: inferProcedureInput<
+				AppRouter["price"]["discount"]["calculate"]
+			> = {
+				productId: productId,
+				basePrice: 100,
+				qty: 15,
+				uomCode: "EA",
+			};
+			const result = await ctx.caller.price.discount.calculate(calcInput);
+
+			expect(result).toBeDefined();
+			expect(result.discountAmount).toBe(15);
+			expect(result.finalPrice).toBe(85);
+		});
+
+		it.sequential("should apply discount only for specific UOM", async () => {
+			const discountInput: inferProcedureInput<
+				AppRouter["price"]["discount"]["create"]
+			> = {
+				code: `COND_UOM_${nanoid(5)}`,
+				name: "UOM Specific Discount",
+				type: "percentage",
+				value: 20,
+				currency: "USD",
+				appliesTo: "global",
+				conditions: {
+					uomCodes: ["PK"],
+				},
+				combinable: false,
+			};
+			await ctx.caller.price.discount.create(discountInput);
+
+			const calcInputPk: inferProcedureInput<
+				AppRouter["price"]["discount"]["calculate"]
+			> = {
+				productId: productId,
+				basePrice: 900,
+				qty: 1,
+				uomCode: "PK",
+			};
+			const resultPk = await ctx.caller.price.discount.calculate(calcInputPk);
+
+			expect(resultPk).toBeDefined();
+			expect(resultPk.discountAmount).toBe(180);
+			expect(resultPk.finalPrice).toBe(720);
+
+			const calcInputEa: inferProcedureInput<
+				AppRouter["price"]["discount"]["calculate"]
+			> = {
+				productId: productId,
+				basePrice: 100,
+				qty: 1,
+				uomCode: "EA",
+			};
+			const resultEa = await ctx.caller.price.discount.calculate(calcInputEa);
+
+			expect(resultEa).toBeDefined();
+			expect(resultEa.discountAmount).toBe(0);
+			expect(resultEa.finalPrice).toBe(100);
+		});
+	});
+
+	describe("Discount with Time Limits", () => {
+		let testCategoryId: string;
+		let productId: string;
+
+		beforeAll(async () => {
+			// Desactivar todos los descuentos globales existentes para evitar interferencias
+			const existingRules = await ctx.caller.price.discount.getAll();
+			for (const rule of existingRules) {
+				if (rule.appliesTo === "global" && rule.isActive) {
+					await ctx.caller.price.discount.update({
+						id: rule.id,
+						isActive: false,
+					});
+				}
+			}
+
+			const categoryInput: inferProcedureInput<
+				AppRouter["product"]["category"]["create"]
+			> = {
+				code: `TIME_CAT_${nanoid(5)}`,
+				name: "Test Category for Time Limits",
+			};
+			const [category] =
+				await ctx.caller.product.category.create(categoryInput);
+			testCategoryId = category.id;
+
+			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
+				{
+					sku: `TIME_PROD_${nanoid(5)}`,
+					name: "Product for Time Limits",
+					categoryId: testCategoryId,
+					baseUom: "EA",
+					prices: [
+						{
+							uomCode: "EA",
+							price: 100,
+							currency: "USD",
+						},
+					],
+				};
+			const product = await ctx.caller.product.create(productInput);
+			productId = product.id;
+		});
+
+		it.sequential(
+			"should apply time-limited discount during valid time window",
+			async () => {
+				const now = new Date();
+				const twentySecondsLater = new Date(now.getTime() + 20000);
+
+				const discountInput: inferProcedureInput<
+					AppRouter["price"]["discount"]["create"]
+				> = {
+					code: `TIME_${nanoid(5)}`,
+					name: "Time-Limited Discount",
+					type: "percentage",
+					value: 15,
+					currency: "USD",
+					appliesTo: "global",
+					combinable: false,
+					startAt: now,
+					endAt: twentySecondsLater,
+				};
+				await ctx.caller.price.discount.create(discountInput);
+
+				const calcInput: inferProcedureInput<
+					AppRouter["price"]["discount"]["calculate"]
+				> = {
+					productId: productId,
+					basePrice: 100,
+					qty: 1,
+					uomCode: "EA",
+				};
+				const resultBefore =
+					await ctx.caller.price.discount.calculate(calcInput);
+
+				expect(resultBefore).toBeDefined();
+				expect(resultBefore.discountAmount).toBe(15);
+				expect(resultBefore.finalPrice).toBe(85);
+			},
+		);
+
+		it.sequential(
+			"should not apply time-limited discount after expiration",
+			async () => {
+				// Desactivar todos los descuentos globales existentes para evitar interferencias
+				const existingRules = await ctx.caller.price.discount.getAll();
+				for (const rule of existingRules) {
+					if (rule.appliesTo === "global" && rule.isActive) {
+						await ctx.caller.price.discount.update({
+							id: rule.id,
+							isActive: false,
+						});
+					}
+				}
+
+				// Create discount that already expired (startAt 20 seconds ago, endAt 10 seconds ago)
+				const now = new Date();
+				const twentySecondsAgo = new Date(now.getTime() - 20000);
+				const tenSecondsAgo = new Date(now.getTime() - 10000);
+
+				const discountInput: inferProcedureInput<
+					AppRouter["price"]["discount"]["create"]
+				> = {
+					code: `TIME_EXP_${nanoid(5)}`,
+					name: "Expired Time-Limited Discount",
+					type: "percentage",
+					value: 20,
+					currency: "USD",
+					appliesTo: "global",
+					combinable: false,
+					startAt: twentySecondsAgo,
+					endAt: tenSecondsAgo,
+				};
+				await ctx.caller.price.discount.create(discountInput);
+
+				const calcInput: inferProcedureInput<
+					AppRouter["price"]["discount"]["calculate"]
+				> = {
+					productId: productId,
+					basePrice: 100,
+					qty: 1,
+					uomCode: "EA",
+				};
+				const resultAfter =
+					await ctx.caller.price.discount.calculate(calcInput);
+
+				expect(resultAfter).toBeDefined();
+				expect(resultAfter.discountAmount).toBe(0);
+				expect(resultAfter.finalPrice).toBe(100);
+				expect(resultAfter.appliedRules).toHaveLength(0);
+			},
+		);
+	});
+
+	describe("Discount Conditions", () => {
+		let testCategoryId: string;
+		let productId: string;
+
+		beforeAll(async () => {
+			const categoryInput: inferProcedureInput<
+				AppRouter["product"]["category"]["create"]
+			> = {
+				code: `SIMPLE_CAT_${nanoid(5)}`,
+				name: "Simple Test Category",
+			};
+			const [category] =
+				await ctx.caller.product.category.create(categoryInput);
+			testCategoryId = category.id;
+
+			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
+				{
+					sku: `SIMPLE_PROD_${nanoid(5)}`,
+					name: "Simple Test Product",
+					categoryId: testCategoryId,
+					baseUom: "EA",
+					prices: [
+						{
+							uomCode: "EA",
+							price: 100,
+							currency: "USD",
+						},
+					],
+				};
+			const product = await ctx.caller.product.create(productInput);
+			productId = product.id;
+		});
+
+		beforeEach(async () => {
+			// Desactivar todos los descuentos globales antes de cada test
+			const existingRules = await ctx.caller.price.discount.getAll();
+			for (const rule of existingRules) {
+				if (rule.appliesTo === "global" && rule.isActive) {
+					await ctx.caller.price.discount.update({
+						id: rule.id,
+						isActive: false,
+					});
+				}
+			}
+		});
+
+		it("should apply discount with maxQty condition", async () => {
+			const discountInput: inferProcedureInput<
+				AppRouter["price"]["discount"]["create"]
+			> = {
+				code: `MAXQTY_${nanoid(5)}`,
+				name: "Max Qty 5 Discount",
+				type: "percentage",
+				value: 10,
+				currency: "USD",
+				appliesTo: "global",
+				conditions: {
+					maxQty: 5,
+				},
+				combinable: false,
+			};
+			await ctx.caller.price.discount.create(discountInput);
+
+			// qty=3 <= 5, should apply
+			const resultLow = await ctx.caller.price.discount.calculate({
+				productId: productId,
+				basePrice: 100,
+				qty: 3,
+				uomCode: "EA",
+			});
+			expect(resultLow.discountAmount).toBe(10);
+
+			// qty=10 > 5, should NOT apply
+			const resultHigh = await ctx.caller.price.discount.calculate({
+				productId: productId,
+				basePrice: 100,
+				qty: 10,
+				uomCode: "EA",
+			});
+			expect(resultHigh.discountAmount).toBe(0);
+		});
+
+		it("should apply discount with minQty and maxQty range", async () => {
+			const discountInput: inferProcedureInput<
+				AppRouter["price"]["discount"]["create"]
+			> = {
+				code: `RANGE_${nanoid(5)}`,
+				name: "Range 5-10 Discount",
+				type: "fixed",
+				value: 5,
+				currency: "USD",
+				appliesTo: "global",
+				conditions: {
+					minQty: 5,
+					maxQty: 10,
+				},
+				combinable: false,
+			};
+			await ctx.caller.price.discount.create(discountInput);
+
+			// qty=3 < 5, should NOT apply
+			const resultLow = await ctx.caller.price.discount.calculate({
+				productId: productId,
+				basePrice: 100,
+				qty: 3,
+				uomCode: "EA",
+			});
+			expect(resultLow.discountAmount).toBe(0);
+
+			// qty=7 in range [5,10], should apply
+			const resultMid = await ctx.caller.price.discount.calculate({
+				productId: productId,
+				basePrice: 100,
+				qty: 7,
+				uomCode: "EA",
+			});
+			expect(resultMid.discountAmount).toBe(5);
+
+			// qty=15 > 10, should NOT apply
+			const resultHigh = await ctx.caller.price.discount.calculate({
+				productId: productId,
+				basePrice: 100,
+				qty: 15,
+				uomCode: "EA",
+			});
+			expect(resultHigh.discountAmount).toBe(0);
+		});
+
+		it("should apply discount with minOrderTotal condition", async () => {
+			const discountInput: inferProcedureInput<
+				AppRouter["price"]["discount"]["create"]
+			> = {
+				code: `ORDERTOTAL_${nanoid(5)}`,
+				name: "Min Order $500 Discount",
+				type: "percentage",
+				value: 20,
+				currency: "USD",
+				appliesTo: "global",
+				conditions: {
+					minOrderTotal: 500,
+				},
+				combinable: false,
+			};
+			await ctx.caller.price.discount.create(discountInput);
+
+			// orderTotal = 100 * 3 = 300 < 500, should NOT apply
+			const resultLow = await ctx.caller.price.discount.calculate({
+				productId: productId,
+				basePrice: 100,
+				qty: 3,
+				uomCode: "EA",
+			});
+			expect(resultLow.discountAmount).toBe(0);
+
+			// orderTotal = 100 * 6 = 600 >= 500, should apply (20% of basePrice = 20)
+			const resultHigh = await ctx.caller.price.discount.calculate({
+				productId: productId,
+				basePrice: 100,
+				qty: 6,
+				uomCode: "EA",
+			});
+			expect(resultHigh.discountAmount).toBe(20);
+		});
+
+		it("should apply discount with daysOfWeek condition", async () => {
+			const today = new Intl.DateTimeFormat("en-US", {
+				weekday: "long",
+			}).format(new Date());
+
+			const discountInput: inferProcedureInput<
+				AppRouter["price"]["discount"]["create"]
+			> = {
+				code: `TODAY_${nanoid(5)}`,
+				name: `Discount for ${today}`,
+				type: "percentage",
+				value: 25,
+				currency: "USD",
+				appliesTo: "global",
+				conditions: {
+					daysOfWeek: [today],
+				},
+				combinable: false,
+			};
+			await ctx.caller.price.discount.create(discountInput);
+
+			// Should apply because today matches
+			const resultToday = await ctx.caller.price.discount.calculate({
+				productId: productId,
+				basePrice: 100,
+				qty: 1,
+				uomCode: "EA",
+			});
+			expect(resultToday.discountAmount).toBe(25);
+
+			// Create discount for a different day (should not apply)
+			const days = [
+				"Monday",
+				"Tuesday",
+				"Wednesday",
+				"Thursday",
+				"Friday",
+				"Saturday",
+				"Sunday",
+			];
+			const tomorrow = days[(days.indexOf(today) + 1) % 7];
+
+			const discountTomorrow: inferProcedureInput<
+				AppRouter["price"]["discount"]["create"]
+			> = {
+				code: `TOMORROW_${nanoid(5)}`,
+				name: `Discount for ${tomorrow}`,
+				type: "percentage",
+				value: 50,
+				currency: "USD",
+				appliesTo: "global",
+				conditions: {
+					daysOfWeek: [tomorrow],
+				},
+				combinable: false,
+			};
+			await ctx.caller.price.discount.create(discountTomorrow);
+
+			// Should NOT apply because tomorrow is not today
+			const resultTomorrow = await ctx.caller.price.discount.calculate({
+				productId: productId,
+				basePrice: 100,
+				qty: 1,
+				uomCode: "EA",
+			});
+			// Only the 25% discount for today should apply, not the 50% for tomorrow
+			expect(resultTomorrow.discountAmount).toBe(25);
+		});
 	});
 });

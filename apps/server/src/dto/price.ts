@@ -56,6 +56,24 @@ export const getActivePrice = z.object({
 	asOfDate: z.date().optional(),
 });
 
+export const discountConditionsSchema = z.object({
+	minQty: z.number().positive().optional(),
+	maxQty: z.number().positive().optional(),
+	uomCodes: z.array(z.string()).optional(),
+	minOrderTotal: z.number().positive().optional(),
+	daysOfWeek: z.array(z.string()).optional(),
+	tiers: z
+		.array(
+			z.object({
+				minQty: z.number().positive(),
+				maxQty: z.number().positive().optional(),
+				discount: z.number(),
+				type: z.enum(["percentage", "fixed"]),
+			}),
+		)
+		.optional(),
+});
+
 export const createDiscountRule = z.object({
 	code: z.string().min(1).max(50),
 	name: z.string().min(1).max(100),
@@ -64,7 +82,7 @@ export const createDiscountRule = z.object({
 	currency: z.string().min(3).max(3).default("USD"),
 	appliesTo: z.enum(discountAppliesTo),
 	appliesToId: z.string().optional(),
-	conditions: z.record(z.string(), z.any()).default({}),
+	conditions: discountConditionsSchema.optional().default({}),
 	combinable: z.boolean().default(false),
 	startAt: z.date().optional(),
 	endAt: z.date().optional(),
@@ -79,7 +97,7 @@ export const updateDiscountRule = z.object({
 	currency: z.string().min(3).max(3).optional(),
 	appliesTo: z.enum(discountAppliesTo).optional(),
 	appliesToId: z.string().optional(),
-	conditions: z.record(z.string(), z.any()).optional(),
+	conditions: discountConditionsSchema.optional(),
 	combinable: z.boolean().optional(),
 	startAt: z.date().optional(),
 	endAt: z.date().optional(),

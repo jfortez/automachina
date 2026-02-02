@@ -1,12 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/db";
+import type { DiscountConditions } from "@/db/schema/products";
 import {
 	type discountAppliesTo,
 	discountRule,
 	type discountTypes,
 	priceList,
-	priceListTypes,
 	product,
 	productPrice,
 } from "@/db/schema/products";
@@ -499,17 +499,100 @@ export const deleteDiscountRule = async (
 };
 
 /**
- * Calculates applicable discounts for a purchase
- * Evaluates all active discount rules and applies them based on conditions
- * @param input - The calculation input parameters
- * @returns Object containing original price, discount amount, final price, and applied rules
+ * Checks if a discount rule meets the specified conditions
+ * @param rule - The discount rule to check
+ * @param qty - The quantity being purchased
+ * @param uomCode - The unit of measure being purchased
+ * @param orderTotal - The total order amount (basePrice * qty)
+ * @returns True if the rule meets all conditions, false otherwise
  */
-export const calculateDiscount = async (input: CalculateDiscountInput) => {
+const checkConditions = (
+	rule: typeof discountRule.$inferSelect,
+	qty: number,
+	uomCode: string,
+	orderTotal: number,
+): boolean => {
+	const conditions = rule.conditions;
+
+	if (!conditions || Object.keys(conditions).length === 0) {
+		return true;
+	}
+
+	if (conditions.minQty !== undefined && qty < conditions.minQty) {
+		return false;
+	}
+
+	if (conditions.maxQty !== undefined && qty > conditions.maxQty) {
+		return false;
+	}
+
+	if (conditions.uomCodes !== undefined && conditions.uomCodes.length > 0) {
+		if (!conditions.uomCodes.includes(uomCode)) {
+			return false;
+		}
+	}
+
+	if (
+		conditions.minOrderTotal !== undefined &&
+		orderTotal < conditions.minOrderTotal
+	) {
+		return false;
+	}
+
+	if (conditions.daysOfWeek !== undefined && conditions.daysOfWeek.length > 0) {
+		const dayOfWeek = new Intl.DateTimeFormat("en-US", {
+			weekday: "long",
+		}).format(new Date());
+		if (!conditions.daysOfWeek.includes(dayOfWeek)) {
+			return false;
+		}
+	}
+
+	return true;
+};
+
+/**
+ * Calculates tiered discount amount based on quantity
+ * @param qty - The quantity being purchased
+ * @param conditions - The discount conditions containing tiers
+ * @param basePrice - The base price for calculation
+ * @returns The discount amount if tiered, undefined otherwise
+ */
+const calculateTieredDiscount = (
+	qty: number,
+	conditions: DiscountConditions,
+	basePrice: number,
+): number | undefined => {
+	if (!conditions.tiers || conditions.tiers.length === 0) {
+		return undefined;
+	}
+
+	const matchingTier = conditions.tiers.find(
+		(tier) =>
+			qty >= tier.minQty && (tier.maxQty === undefined || qty <= tier.maxQty),
+	);
+
+	if (!matchingTier) {
+		return undefined;
+	}
+
+	return matchingTier.type === "percentage"
+		? basePrice * (matchingTier.discount / 100)
+		: matchingTier.discount;
+};
+
+export const calculateDiscount = async (
+	input: CalculateDiscountInput,
+	organizationId: string,
+) => {
 	const { productId, basePrice, qty, priceListId, customerId, uomCode } = input;
 	const now = new Date();
 
 	const productData = await db.query.product.findFirst({
-		where: eq(product.id, productId),
+		where: and(
+			eq(product.id, productId),
+			eq(product.organizationId, organizationId),
+		),
 		columns: {
 			id: true,
 			categoryId: true,
@@ -525,13 +608,20 @@ export const calculateDiscount = async (input: CalculateDiscountInput) => {
 
 	const allRules = await db.query.discountRule.findMany({
 		where: and(
+			eq(discountRule.organizationId, organizationId),
 			eq(discountRule.isActive, true),
 			or(isNull(discountRule.startAt), lte(discountRule.startAt, now)),
 			or(isNull(discountRule.endAt), gte(discountRule.endAt, now)),
 		),
 	});
 
+	const orderTotal = basePrice * qty;
+
 	const applicableRules = allRules.filter((rule) => {
+		if (!checkConditions(rule, qty, uomCode, orderTotal)) {
+			return false;
+		}
+
 		switch (rule.appliesTo) {
 			case "global":
 				return true;
@@ -563,43 +653,57 @@ export const calculateDiscount = async (input: CalculateDiscountInput) => {
 	if (nonCombinableRules.length > 0) {
 		const bestRule = nonCombinableRules.reduce((best, current) => {
 			const bestDiscount =
-				best.type === "percentage"
-					? basePrice * (Number(best.value) / 100)
-					: Number(best.value);
+				best.type === "tiered"
+					? (calculateTieredDiscount(qty, best.conditions, basePrice) ?? 0)
+					: best.type === "percentage"
+						? basePrice * (Number(best.value) / 100)
+						: Number(best.value);
 			const currentDiscount =
-				current.type === "percentage"
-					? basePrice * (Number(current.value) / 100)
-					: Number(current.value);
+				current.type === "tiered"
+					? (calculateTieredDiscount(qty, current.conditions, basePrice) ?? 0)
+					: current.type === "percentage"
+						? basePrice * (Number(current.value) / 100)
+						: Number(current.value);
 			return currentDiscount > bestDiscount ? current : best;
 		});
 
 		const discountAmount =
-			bestRule.type === "percentage"
-				? basePrice * (Number(bestRule.value) / 100)
-				: Number(bestRule.value);
+			bestRule.type === "tiered"
+				? (calculateTieredDiscount(qty, bestRule.conditions, basePrice) ?? 0)
+				: bestRule.type === "percentage"
+					? basePrice * (Number(bestRule.value) / 100)
+					: Number(bestRule.value);
 
 		totalDiscount += discountAmount;
 		appliedRules.push({
 			ruleId: bestRule.id,
 			ruleName: bestRule.name,
 			discountType: bestRule.type,
-			discountValue: Number(bestRule.value),
+			discountValue:
+				bestRule.type === "tiered"
+					? (calculateTieredDiscount(qty, bestRule.conditions, basePrice) ?? 0)
+					: Number(bestRule.value),
 			discountAmount,
 		});
 	}
 
 	for (const rule of combinableRules) {
 		const discountAmount =
-			rule.type === "percentage"
-				? basePrice * (Number(rule.value) / 100)
-				: Number(rule.value);
+			rule.type === "tiered"
+				? (calculateTieredDiscount(qty, rule.conditions, basePrice) ?? 0)
+				: rule.type === "percentage"
+					? basePrice * (Number(rule.value) / 100)
+					: Number(rule.value);
 
 		totalDiscount += discountAmount;
 		appliedRules.push({
 			ruleId: rule.id,
 			ruleName: rule.name,
 			discountType: rule.type,
-			discountValue: Number(rule.value),
+			discountValue:
+				rule.type === "tiered"
+					? (calculateTieredDiscount(qty, rule.conditions, basePrice) ?? 0)
+					: Number(rule.value),
 			discountAmount,
 		});
 	}
