@@ -68,26 +68,30 @@ const getProductIdentifiers = async () => {
 	return identifiers;
 };
 
-const createProduct = async (d: CreateProductInput, organizationId: string) => {
-	console.log(d);
+const createProduct = async (
+	input: CreateProductInput,
+	organizationId: string,
+) => {
 	return await db.transaction(async (tx) => {
 		// Validate base UoM exists in uom table
 		const [baseUom] = await tx
 			.select()
 			.from(uom)
-			.where(eq(uom.code, d.baseUom))
+			.where(eq(uom.code, input.baseUom))
 			.limit(1);
 		if (!baseUom) {
 			throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid baseUom" });
 		}
 
-		let productUoms = d.productUoms || [];
-		const baseUomExists = productUoms.some((pu) => pu.uomCode === d.baseUom);
+		let productUoms = input.productUoms || [];
+		const baseUomExists = productUoms.some(
+			(pu) => pu.uomCode === input.baseUom,
+		);
 
-		if (d.isPhysical && !baseUomExists) {
+		if (input.isPhysical && !baseUomExists) {
 			productUoms = [
 				...productUoms,
-				{ uomCode: d.baseUom, qtyInBase: "1", isBase: true },
+				{ uomCode: input.baseUom, qtyInBase: "1", isBase: true },
 			];
 		}
 
@@ -106,12 +110,12 @@ const createProduct = async (d: CreateProductInput, organizationId: string) => {
 			}
 
 			// If qtyInBase not provided and uomCode != baseUom, check uom_conversion
-			if (!productUoM.qtyInBase && productUoM.uomCode !== d.baseUom) {
+			if (!productUoM.qtyInBase && productUoM.uomCode !== input.baseUom) {
 				const [conversion] = await tx
 					.select({ factor: uomConversion.factor })
 					.from(uomConversion)
 					.where(
-						sql`${uomConversion.fromUom} = ${productUoM.uomCode} AND ${uomConversion.toUom} = ${d.baseUom}`,
+						sql`${uomConversion.fromUom} = ${productUoM.uomCode} AND ${uomConversion.toUom} = ${input.baseUom}`,
 					)
 					.limit(1);
 				if (conversion) {
@@ -119,7 +123,7 @@ const createProduct = async (d: CreateProductInput, organizationId: string) => {
 				} else {
 					throw new TRPCError({
 						code: "BAD_REQUEST",
-						message: `No conversion found from ${productUoM.uomCode} to ${d.baseUom}`,
+						message: `No conversion found from ${productUoM.uomCode} to ${input.baseUom}`,
 					});
 				}
 			}
@@ -129,20 +133,20 @@ const createProduct = async (d: CreateProductInput, organizationId: string) => {
 			.insert(productTable)
 			.values({
 				organizationId,
-				sku: d.sku,
-				name: d.name,
-				description: d.description,
-				categoryId: d.categoryId,
-				baseUom: d.baseUom,
-				trackingLevel: d.isPhysical ? d.trackingLevel : "none",
-				perishable: d.perishable,
-				shelfLifeDays: d.shelfLifeDays,
-				attributes: d.attributes ?? {},
-				isPhysical: d.isPhysical,
-				productFamilyId: d.productFamilyId,
-				suggestedRetailPrice: d.suggestedRetailPrice,
-				defaultCost: d.defaultCost,
-				defaultCurrency: d.defaultCurrency,
+				sku: input.sku,
+				name: input.name,
+				description: input.description,
+				categoryId: input.categoryId,
+				baseUom: input.baseUom,
+				trackingLevel: input.isPhysical ? input.trackingLevel : "none",
+				perishable: input.perishable,
+				shelfLifeDays: input.shelfLifeDays,
+				attributes: input.attributes ?? {},
+				isPhysical: input.isPhysical,
+				productFamilyId: input.productFamilyId,
+				suggestedRetailPrice: input.suggestedRetailPrice,
+				defaultCost: input.defaultCost,
+				defaultCurrency: input.defaultCurrency,
 			})
 			.returning();
 
@@ -155,25 +159,25 @@ const createProduct = async (d: CreateProductInput, organizationId: string) => {
 					productId: prodId,
 					uomCode: pu.uomCode,
 					qtyInBase: (pu.qtyInBase || 1).toString(),
-					isBase: pu.isBase ?? pu.uomCode === d.baseUom,
+					isBase: pu.isBase ?? pu.uomCode === input.baseUom,
 				})),
 			);
 		}
 
-		if (d.images) {
+		if (input.images) {
 			await tx.insert(productImages).values(
-				d.images.map((img) => ({
+				input.images.map((img) => ({
 					productId: prodId,
-					productFamilyId: d.productFamilyId, // Optional link to family
+					productFamilyId: input.productFamilyId, // Optional link to family
 					...img,
 				})),
 			);
 		}
 
 		// Insert identifiers if provided (e.g., different GTIN for package vs unit)
-		if (d.identifiers?.length) {
+		if (input.identifiers?.length) {
 			await tx.insert(productIdentifiers).values(
-				d.identifiers.map((id) => ({
+				input.identifiers.map((id) => ({
 					productId: prodId,
 					type: id.type,
 					value: id.value,
@@ -182,13 +186,14 @@ const createProduct = async (d: CreateProductInput, organizationId: string) => {
 			);
 		}
 
-		if (d.prices?.length) {
+		if (input.prices?.length) {
 			let defaultPriceListId: string | undefined;
 			const [existingPriceList] = await tx
 				.select({ id: priceList.id })
 				.from(priceList)
 				.where(eq(priceList.code, "public"))
 				.limit(1);
+			//TODO: Remove this. create a default price list when a organization is created (afeterInsert hook)
 			if (!existingPriceList) {
 				const [newPriceList] = await tx
 					.insert(priceList)
@@ -197,7 +202,7 @@ const createProduct = async (d: CreateProductInput, organizationId: string) => {
 						code: "public",
 						name: "Public Price List",
 						type: "public",
-						currency: d.defaultCurrency,
+						currency: input.defaultCurrency,
 					})
 					.returning({ id: priceList.id });
 				defaultPriceListId = newPriceList.id;
@@ -206,7 +211,7 @@ const createProduct = async (d: CreateProductInput, organizationId: string) => {
 			}
 
 			await tx.insert(productPrice).values(
-				d.prices.map((pr) => ({
+				input.prices.map((pr) => ({
 					productId: prodId,
 					priceListId: pr.priceListId ?? defaultPriceListId, // Fallback to default
 					customerId: pr.customerId,

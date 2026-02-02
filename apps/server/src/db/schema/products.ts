@@ -181,6 +181,29 @@ export const productFamily = pgTable(
 	(t) => [unique().on(t.organizationId, t.code)],
 );
 
+export const priceListTypes = [
+	"public",
+	"customer",
+	"promotional",
+	"internal",
+] as const;
+
+export const discountTypes = [
+	"percentage",
+	"fixed",
+	"volume",
+	"bogo",
+	"tiered",
+] as const;
+
+export const discountAppliesTo = [
+	"product",
+	"category",
+	"price_list",
+	"customer",
+	"global",
+] as const;
+
 export const priceList = pgTable(
 	"price_list",
 	{
@@ -190,18 +213,12 @@ export const priceList = pgTable(
 			.notNull(),
 		code: text("code").notNull(),
 		name: text("name").notNull(),
-		type: text("type").notNull(),
+		type: text("type", { enum: priceListTypes }).notNull(),
 		currency: text("currency"),
 		attributes: jsonb("attributes").default(sql`'{}'::jsonb`).notNull(),
 		...timestamps,
 	},
-	(t) => [
-		unique().on(t.organizationId, t.code),
-		check(
-			"check_type",
-			sql`(${t.type} IN ('public','customer','promotional','internal'))`,
-		),
-	],
+	(t) => [unique().on(t.organizationId, t.code)],
 );
 
 export const productPrice = pgTable(
@@ -245,10 +262,10 @@ export const discountRule = pgTable(
 			.notNull(),
 		code: text("code").notNull(),
 		name: text("name").notNull(),
-		type: text("type").notNull(),
+		type: text("type", { enum: discountTypes }).notNull(),
 		value: numeric("value", { precision: 18, scale: 6 }).notNull(),
-		currency: text("currency"),
-		appliesTo: text("applies_to").notNull(),
+		currency: text("currency").notNull().default("USD"),
+		appliesTo: text("applies_to", { enum: discountAppliesTo }).notNull(),
 		appliesToId: uuid("applies_to_id"),
 		conditions: jsonb("conditions").notNull().default(sql`'{}'::jsonb`),
 		combinable: boolean("combinable").notNull().default(false),
@@ -257,17 +274,7 @@ export const discountRule = pgTable(
 		isActive: boolean("is_active").notNull().default(true),
 		createdAt: timestamp("created_at").notNull().defaultNow(),
 	},
-	(t) => [
-		check(
-			"check_type",
-			sql`${t.type} IN ('percentage','fixed','volume','bogo','tiered')`,
-		),
-		check(
-			"check_applies_to",
-			sql`${t.appliesTo} IN ('product','category','price_list','global')`,
-		),
-		index().on(t.organizationId),
-	],
+	(t) => [index().on(t.organizationId)],
 );
 
 // Relations for all tables (defined after all tables to avoid forward reference issues)

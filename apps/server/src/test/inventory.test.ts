@@ -425,3 +425,131 @@ describe("Testing Inventory Adjustments", () => {
 		// Note: Cannot directly verify ledger notes in this test, but the function should handle it
 	});
 });
+
+describe("Testing Inventory with Product Prices", () => {
+	let ctx: Awaited<ReturnType<typeof setupTestContext>>;
+	let productWithPricesId: string;
+	const eaPrice = 2.5;
+	const pkPrice = 12.0;
+
+	beforeAll(async () => {
+		ctx = await setupTestContext();
+
+		// Crear producto con precios específicos por UOM
+		const productInput: inferProcedureInput<AppRouter["product"]["create"]> = {
+			sku: `SKU_PRICES_${nanoid(8)}`,
+			name: "Product with Multiple UOM Prices",
+			baseUom: "EA",
+			trackingLevel: "none",
+			isPhysical: true,
+			categoryId: ctx.defaultCategoryId,
+			productUoms: [
+				{
+					uomCode: "PK",
+					qtyInBase: "6",
+				},
+			],
+			prices: [
+				{
+					uomCode: "EA",
+					price: eaPrice,
+					currency: "USD",
+					minQty: 1,
+				},
+				{
+					uomCode: "PK",
+					price: pkPrice,
+					currency: "USD",
+					minQty: 1,
+				},
+			],
+		};
+
+		const createdProduct = await ctx.caller.product.create(productInput);
+		productWithPricesId = createdProduct.id;
+	});
+
+	it.sequential(
+		"should receive inventory and verify product prices exist",
+		async () => {
+			// Recibir 10 PK (60 EA en base)
+			const receiveQty = 10;
+			const receiveInput: inferProcedureInput<
+				AppRouter["inventory"]["receive"]
+			> = {
+				warehouseId: globals.warehouse.id,
+				productId: productWithPricesId,
+				qty: receiveQty,
+				uomCode: "PK",
+				currency: "USD",
+			};
+
+			const received = await ctx.caller.inventory.receive(receiveInput);
+
+			expect(received.success).toBe(true);
+			expect(received.qtyInBase).toBe(receiveQty * 6);
+
+			// Verificar que los precios del producto están configurados
+			const productPrices =
+				await ctx.caller.price.product.getByProduct(productWithPricesId);
+
+			expect(productPrices.length).toBe(2);
+
+			const eaPriceConfig = productPrices.find((p) => p.uomCode === "EA");
+			expect(eaPriceConfig).toBeDefined();
+			expect(Number(eaPriceConfig?.price)).toBe(eaPrice);
+
+			const pkPriceConfig = productPrices.find((p) => p.uomCode === "PK");
+			expect(pkPriceConfig).toBeDefined();
+			expect(Number(pkPriceConfig?.price)).toBe(pkPrice);
+		},
+	);
+
+	it.sequential("should sell product using different UOMs", async () => {
+		// Vender 2 PK y 5 EA
+		const sellInput: inferProcedureInput<AppRouter["inventory"]["sell"]> = {
+			warehouseId: globals.warehouse.id,
+			productId: productWithPricesId,
+			lines: [
+				{ qty: 2, uomCode: "PK" },
+				{ qty: 5, uomCode: "EA" },
+			],
+		};
+
+		const sold = await ctx.caller.inventory.sell(sellInput);
+		expect(sold.success).toBe(true);
+
+		// Verificar stock final: 60 - (2*6 + 5) = 60 - 17 = 43
+		const finalStock = await ctx.caller.product.getStock({
+			productId: productWithPricesId,
+			warehouseId: globals.warehouse.id,
+		});
+
+		expect(finalStock.totalQty).toBe(43);
+	});
+
+	it.sequential(
+		"should calculate order value using configured prices",
+		async () => {
+			// Calcular valor de una orden: 3 PK + 10 EA
+			// Valor esperado: 3*12.0 + 10*2.5 = 36 + 25 = 61
+			const expectedValue = 3 * pkPrice + 10 * eaPrice;
+
+			// Obtener precios directamente del producto
+			const productPrices =
+				await ctx.caller.price.product.getByProduct(productWithPricesId);
+
+			const eaPriceConfig = productPrices.find((p) => p.uomCode === "EA");
+			const pkPriceConfig = productPrices.find((p) => p.uomCode === "PK");
+
+			expect(eaPriceConfig).toBeDefined();
+			expect(pkPriceConfig).toBeDefined();
+
+			const calculatedValue =
+				3 * Number(pkPriceConfig?.price || 0) +
+				10 * Number(eaPriceConfig?.price || 0);
+
+			expect(calculatedValue).toBe(expectedValue);
+		},
+	);
+});

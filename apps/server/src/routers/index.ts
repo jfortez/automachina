@@ -10,6 +10,7 @@ import { inventoryRouter } from "./inventory";
 import { invoiceRouter } from "./invoice";
 import { orderRouter } from "./order";
 import { orgRouter } from "./organization";
+import { priceRouter } from "./price";
 import { productRouter } from "./product";
 import { supplierRouter } from "./supplier";
 import { uomRouter } from "./uom";
@@ -29,6 +30,7 @@ export const appRouter = router({
 	organization: orgRouter,
 	supplier: supplierRouter,
 	product: productRouter,
+	price: priceRouter,
 	uom: uomRouter,
 	customer: customerRouter,
 	inventory: inventoryRouter,

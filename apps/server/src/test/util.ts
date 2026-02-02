@@ -43,3 +43,7 @@ export async function setupTestContext(): Promise<TestContext> {
 		defaultCustomerId: `test-customer-id-${Date.now()}`,
 	};
 }
+
+export function formatNumeric(value: number, scale = 6): string {
+	return value.toFixed(scale);
+}
