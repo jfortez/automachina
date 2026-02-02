@@ -288,6 +288,8 @@ export const discountRule = pgTable(
 		combinable: boolean("combinable").notNull().default(false),
 		startAt: timestamp("start_at"),
 		endAt: timestamp("end_at"),
+		maxUses: integer("max_uses"),
+		usedCount: integer("used_count").notNull().default(0),
 		isActive: boolean("is_active").notNull().default(true),
 		createdAt: timestamp("created_at").notNull().defaultNow(),
 	},

@@ -1,13 +1,16 @@
 import { z } from "zod";
 import {
+	bulkCalculateDiscount,
 	calculateDiscount,
 	createDiscountRule,
 	createPriceList,
 	createProductPrice,
 	getActivePrice,
+	previewDiscount,
 	updateDiscountRule,
 	updatePriceList,
 	updateProductPrice,
+	validateDiscount,
 } from "@/dto/price";
 import { protectedProcedure, router } from "@/lib/trpc";
 import * as priceServices from "@/services/price";
@@ -98,8 +101,61 @@ export const priceRouter = router({
 
 		calculate: protectedProcedure
 			.input(calculateDiscount)
+			.mutation(async ({ input, ctx }) => {
+				const result = await priceServices.calculateDiscount(
+					input,
+					ctx.organizationId,
+				);
+				if (result.appliedRules.length > 0) {
+					await priceServices.incrementDiscountUsage(
+						result.appliedRules.map((r) => r.ruleId),
+						ctx.organizationId,
+					);
+				}
+				return result;
+			}),
+
+		calculateBulk: protectedProcedure
+			.input(bulkCalculateDiscount)
+			.mutation(async ({ input, ctx }) => {
+				const results = await priceServices.calculateBulkDiscounts(
+					input.lines,
+					ctx.organizationId,
+				);
+				// Increment usage for all applied rules
+				const allRuleIds = results
+					.flatMap((r) => r.appliedRules)
+					.map((r) => r.ruleId);
+				if (allRuleIds.length > 0) {
+					await priceServices.incrementDiscountUsage(
+						allRuleIds,
+						ctx.organizationId,
+					);
+				}
+				return results;
+			}),
+
+		preview: protectedProcedure
+			.input(previewDiscount)
 			.query(({ input, ctx }) => {
-				return priceServices.calculateDiscount(input, ctx.organizationId);
+				return priceServices.previewDiscount(input, ctx.organizationId);
+			}),
+
+		validate: protectedProcedure
+			.input(validateDiscount)
+			.query(({ input, ctx }) => {
+				return priceServices.validateDiscount(
+					input.code,
+					{
+						productId: input.productId,
+						basePrice: input.basePrice,
+						qty: input.qty,
+						uomCode: input.uomCode,
+						priceListId: input.priceListId,
+						customerId: input.customerId,
+					},
+					ctx.organizationId,
+				);
 			}),
 	}),
 });

@@ -78,7 +78,7 @@ export const createDiscountRule = z.object({
 	code: z.string().min(1).max(50),
 	name: z.string().min(1).max(100),
 	type: z.enum(discountTypes),
-	value: z.number().min(0),
+	value: z.number().min(0).max(100, "Percentage discount cannot exceed 100%"),
 	currency: z.string().min(3).max(3).default("USD"),
 	appliesTo: z.enum(discountAppliesTo),
 	appliesToId: z.string().optional(),
@@ -86,6 +86,7 @@ export const createDiscountRule = z.object({
 	combinable: z.boolean().default(false),
 	startAt: z.date().optional(),
 	endAt: z.date().optional(),
+	maxUses: z.number().int().positive().optional(),
 });
 
 export const updateDiscountRule = z.object({
@@ -93,7 +94,11 @@ export const updateDiscountRule = z.object({
 	code: z.string().min(1).max(50).optional(),
 	name: z.string().min(1).max(100).optional(),
 	type: z.enum(discountTypes).optional(),
-	value: z.number().min(0).optional(),
+	value: z
+		.number()
+		.min(0)
+		.max(100, "Percentage discount cannot exceed 100%")
+		.optional(),
 	currency: z.string().min(3).max(3).optional(),
 	appliesTo: z.enum(discountAppliesTo).optional(),
 	appliesToId: z.string().optional(),
@@ -101,6 +106,7 @@ export const updateDiscountRule = z.object({
 	combinable: z.boolean().optional(),
 	startAt: z.date().optional(),
 	endAt: z.date().optional(),
+	maxUses: z.number().int().positive().optional(),
 	isActive: z.boolean().optional(),
 });
 
@@ -128,6 +134,40 @@ export const discountCalculationResult = z.object({
 	),
 });
 
+export const bulkCalculateDiscount = z.object({
+	lines: z
+		.array(
+			z.object({
+				productId: z.string(),
+				basePrice: z.number().positive(),
+				qty: z.number().positive().default(1),
+				uomCode: z.string().min(1),
+				priceListId: z.string().optional(),
+				customerId: z.string().optional(),
+			}),
+		)
+		.min(1),
+});
+
+export const previewDiscount = z.object({
+	productId: z.string(),
+	basePrice: z.number().positive(),
+	qty: z.number().positive().default(1),
+	uomCode: z.string().min(1),
+	priceListId: z.string().optional(),
+	customerId: z.string().optional(),
+});
+
+export const validateDiscount = z.object({
+	code: z.string().min(1),
+	productId: z.string(),
+	basePrice: z.number().positive(),
+	qty: z.number().positive().default(1),
+	uomCode: z.string().min(1),
+	priceListId: z.string().optional(),
+	customerId: z.string().optional(),
+});
+
 export type CreatePriceListInput = z.infer<typeof createPriceList>;
 export type UpdatePriceListInput = z.infer<typeof updatePriceList>;
 export type CreateProductPriceInput = z.infer<typeof createProductPrice>;
@@ -139,3 +179,6 @@ export type CalculateDiscountInput = z.infer<typeof calculateDiscount>;
 export type DiscountCalculationResult = z.infer<
 	typeof discountCalculationResult
 >;
+export type BulkCalculateDiscountInput = z.infer<typeof bulkCalculateDiscount>;
+export type PreviewDiscountInput = z.infer<typeof previewDiscount>;
+export type ValidateDiscountInput = z.infer<typeof validateDiscount>;

@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { db } from "@/db";
+import { customers } from "@/db/schema/customer";
 import type { DiscountConditions } from "@/db/schema/products";
 import {
 	type discountAppliesTo,
@@ -20,6 +21,7 @@ import type {
 	UpdatePriceListInput,
 	UpdateProductPriceInput,
 } from "@/dto/price";
+import { discountConditionsSchema } from "@/dto/price";
 
 /**
  * Retrieves all price lists for a specific organization
@@ -376,6 +378,25 @@ export const createDiscountRule = async (
 	data: CreateDiscountRuleInput,
 	organizationId: string,
 ) => {
+	// Validate conditions using Zod schema
+	const conditionsValidation = discountConditionsSchema.safeParse(
+		data.conditions,
+	);
+	if (!conditionsValidation.success) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `Invalid conditions: ${conditionsValidation.error.message}`,
+		});
+	}
+
+	// Validate value based on type
+	if (data.type === "percentage" && data.value > 100) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Percentage discount cannot exceed 100%",
+		});
+	}
+
 	const [created] = await db
 		.insert(discountRule)
 		.values({
@@ -391,6 +412,7 @@ export const createDiscountRule = async (
 			combinable: data.combinable,
 			startAt: data.startAt,
 			endAt: data.endAt,
+			maxUses: data.maxUses,
 			isActive: true,
 		})
 		.returning();
@@ -715,5 +737,287 @@ export const calculateDiscount = async (
 		discountAmount: totalDiscount,
 		finalPrice,
 		appliedRules,
+	};
+};
+
+/**
+ * Validates security permissions for discount calculation
+ * Checks if customer and price list belong to the organization
+ */
+const validateDiscountSecurity = async (
+	customerId: string | undefined,
+	priceListId: string | undefined,
+	organizationId: string,
+): Promise<void> => {
+	if (customerId) {
+		const customer = await db.query.customers.findFirst({
+			where: and(
+				eq(customers.id, customerId),
+				eq(customers.organizationId, organizationId),
+			),
+		});
+		if (!customer) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Customer not found or does not belong to this organization",
+			});
+		}
+	}
+
+	if (priceListId) {
+		const priceListData = await db.query.priceList.findFirst({
+			where: and(
+				eq(priceList.id, priceListId),
+				eq(priceList.organizationId, organizationId),
+			),
+		});
+		if (!priceListData) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Price list not found or does not belong to this organization",
+			});
+		}
+	}
+};
+
+/**
+ * Increments the used count for applicable discount rules
+ * Should be called when a discount is actually applied (not just previewed)
+ */
+export const incrementDiscountUsage = async (
+	ruleIds: string[],
+	organizationId: string,
+): Promise<void> => {
+	for (const ruleId of ruleIds) {
+		const rule = await db.query.discountRule.findFirst({
+			where: and(
+				eq(discountRule.id, ruleId),
+				eq(discountRule.organizationId, organizationId),
+			),
+		});
+
+		if (rule && rule.maxUses !== null && rule.maxUses !== undefined) {
+			if (rule.usedCount >= rule.maxUses) {
+				throw new TRPCError({
+					code: "CONFLICT",
+					message: `Discount rule ${rule.code} has reached its usage limit`,
+				});
+			}
+
+			await db
+				.update(discountRule)
+				.set({ usedCount: rule.usedCount + 1 })
+				.where(eq(discountRule.id, ruleId));
+		}
+	}
+};
+
+/**
+ * Calculates discounts for multiple order lines
+ * @param lines - Array of order lines with product details
+ * @param organizationId - The organization ID
+ * @returns Array of discount calculations for each line
+ */
+export const calculateBulkDiscounts = async (
+	lines: Array<{
+		productId: string;
+		basePrice: number;
+		qty: number;
+		uomCode: string;
+		priceListId?: string;
+		customerId?: string;
+	}>,
+	organizationId: string,
+) => {
+	// Validate security for customer and price list (only once)
+	const uniqueCustomers = [
+		...new Set(lines.map((l) => l.customerId).filter(Boolean)),
+	];
+	const uniquePriceLists = [
+		...new Set(lines.map((l) => l.priceListId).filter(Boolean)),
+	];
+
+	for (const customerId of uniqueCustomers) {
+		await validateDiscountSecurity(customerId, undefined, organizationId);
+	}
+	for (const priceListId of uniquePriceLists) {
+		await validateDiscountSecurity(undefined, priceListId, organizationId);
+	}
+
+	// Calculate discounts for each line
+	const results = await Promise.all(
+		lines.map((line) =>
+			calculateDiscount(
+				{
+					productId: line.productId,
+					basePrice: line.basePrice,
+					qty: line.qty,
+					uomCode: line.uomCode,
+					priceListId: line.priceListId,
+					customerId: line.customerId,
+				},
+				organizationId,
+			),
+		),
+	);
+
+	return results;
+};
+
+/**
+ * Previews applicable discounts without incrementing usage counters
+ * @param input - The calculation input
+ * @param organizationId - The organization ID
+ * @returns Discount calculation result
+ */
+export const previewDiscount = async (
+	input: CalculateDiscountInput,
+	organizationId: string,
+) => {
+	await validateDiscountSecurity(
+		input.customerId,
+		input.priceListId,
+		organizationId,
+	);
+
+	return calculateDiscount(input, organizationId);
+};
+
+/**
+ * Validates if a discount rule is applicable for the given parameters
+ * @param code - The discount rule code
+ * @param input - The calculation input parameters
+ * @param organizationId - The organization ID
+ * @returns Validation result with details
+ */
+export const validateDiscount = async (
+	code: string,
+	input: CalculateDiscountInput,
+	organizationId: string,
+) => {
+	const now = new Date();
+
+	// Find the discount rule
+	const rule = await db.query.discountRule.findFirst({
+		where: and(
+			eq(discountRule.code, code),
+			eq(discountRule.organizationId, organizationId),
+		),
+	});
+
+	if (!rule) {
+		return {
+			isValid: false,
+			reason: "Discount rule not found",
+		};
+	}
+
+	// Check if active
+	if (!rule.isActive) {
+		return {
+			isValid: false,
+			reason: "Discount rule is inactive",
+		};
+	}
+
+	// Check time limits
+	if (rule.startAt && now < rule.startAt) {
+		return {
+			isValid: false,
+			reason: "Discount rule has not started yet",
+		};
+	}
+
+	if (rule.endAt && now > rule.endAt) {
+		return {
+			isValid: false,
+			reason: "Discount rule has expired",
+		};
+	}
+
+	// Check usage limits
+	if (rule.maxUses !== null && rule.maxUses !== undefined) {
+		if (rule.usedCount >= rule.maxUses) {
+			return {
+				isValid: false,
+				reason: "Discount rule has reached its usage limit",
+			};
+		}
+	}
+
+	// Check if applies to this product/customer/price list
+	const productData = await db.query.product.findFirst({
+		where: and(
+			eq(product.id, input.productId),
+			eq(product.organizationId, organizationId),
+		),
+		columns: {
+			id: true,
+			categoryId: true,
+		},
+	});
+
+	if (!productData) {
+		return {
+			isValid: false,
+			reason: "Product not found",
+		};
+	}
+
+	let appliesToTarget = false;
+	switch (rule.appliesTo) {
+		case "global":
+			appliesToTarget = true;
+			break;
+		case "product":
+			appliesToTarget = rule.appliesToId === input.productId;
+			break;
+		case "category":
+			appliesToTarget = rule.appliesToId === productData.categoryId;
+			break;
+		case "price_list":
+			appliesToTarget = input.priceListId
+				? rule.appliesToId === input.priceListId
+				: false;
+			break;
+		case "customer":
+			appliesToTarget = input.customerId
+				? rule.appliesToId === input.customerId
+				: false;
+			break;
+	}
+
+	if (!appliesToTarget) {
+		return {
+			isValid: false,
+			reason: "Discount rule does not apply to this target",
+		};
+	}
+
+	// Check conditions
+	const orderTotal = input.basePrice * input.qty;
+	const conditionsMet = checkConditions(
+		rule,
+		input.qty,
+		input.uomCode,
+		orderTotal,
+	);
+
+	if (!conditionsMet) {
+		return {
+			isValid: false,
+			reason: "Conditions not met for this discount rule",
+		};
+	}
+
+	return {
+		isValid: true,
+		rule: {
+			id: rule.id,
+			code: rule.code,
+			name: rule.name,
+			type: rule.type,
+			value: Number(rule.value),
+		},
 	};
 };
