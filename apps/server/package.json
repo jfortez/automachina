@@ -15,9 +15,10 @@
 		"db:start": "docker compose up -d",
 		"db:watch": "docker compose up",
 		"db:stop": "docker compose stop",
-		"db:down": "docker compose down",
+		"db:up": "docker compose up -d postgres && pnpm db:push",
+		"db:down": "docker compose down postgres -v --remove-orphans",
 		"db:seed": "bun run ./src/db/seed",
-		"db:reset": "docker compose down postgres -v --remove-orphans && docker compose up -d postgres && pnpm db:push && pnpm db:seed",
+		"db:reset": "pnpm db:down && docker compose up -d postgres && pnpm db:push && pnpm db:seed",
 		"test": "vitest"
 	},
 	"dependencies": {

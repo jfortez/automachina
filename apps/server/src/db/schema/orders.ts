@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+	index,
 	numeric,
 	pgTable,
 	text,
@@ -115,24 +116,42 @@ export const salesOrderLines = pgTable("sales_order_line", {
 	notes: text("notes"),
 });
 
-export const inventoryReservations = pgTable("inventory_reservation", {
-	id: uuidPk("id"),
-	organizationId: text("organization_id")
-		.references(() => organization.id)
-		.notNull(),
-	salesOrderLineId: uuid("sales_order_line_id").references(
-		() => salesOrderLines.id,
-	),
-	productId: uuid("product_id")
-		.references(() => product.id)
-		.notNull(),
-	batchId: uuid("batch_id").references(() => batches.id),
-	handlingUnitId: uuid("handling_unit_id").references(() => handlingUnits.id),
-	qtyInBase: numeric("qty_in_base", { precision: 28, scale: 9 }).notNull(),
-	createdAt: timestamp("created_at", { withTimezone: true })
-		.defaultNow()
-		.notNull(),
-});
+export const reservationTypes = ["soft", "hard"] as const;
+
+export const inventoryReservations = pgTable(
+	"inventory_reservation",
+	{
+		id: uuidPk("id"),
+		organizationId: text("organization_id")
+			.references(() => organization.id)
+			.notNull(),
+		reservationType: text("reservation_type", {
+			enum: reservationTypes,
+		}).notNull(),
+		referenceType: text("reference_type"),
+		referenceId: text("reference_id"),
+		productId: uuid("product_id")
+			.references(() => product.id)
+			.notNull(),
+		warehouseId: uuid("warehouse_id").references(() => warehouses.id),
+		batchId: uuid("batch_id").references(() => batches.id),
+		handlingUnitId: uuid("handling_unit_id").references(() => handlingUnits.id),
+		qtyInBase: numeric("qty_in_base", { precision: 28, scale: 9 }).notNull(),
+		uomCode: text("uom_code").references(() => uom.code),
+		expiresAt: timestamp("expires_at", { withTimezone: true }),
+		releasedAt: timestamp("released_at", { withTimezone: true }),
+		releaseReason: text("release_reason"),
+		notes: text("notes"),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.defaultNow()
+			.notNull(),
+	},
+	(t) => [
+		index().on(t.organizationId, t.productId),
+		index().on(t.referenceType, t.referenceId),
+		index().on(t.expiresAt),
+	],
+);
 
 // Relations
 export const purchaseOrdersRelations = relations(
@@ -190,7 +209,7 @@ export const salesOrdersRelations = relations(salesOrders, ({ one, many }) => ({
 
 export const salesOrderLinesRelations = relations(
 	salesOrderLines,
-	({ one, many }) => ({
+	({ one }) => ({
 		salesOrder: one(salesOrders, {
 			fields: [salesOrderLines.salesOrderId],
 			references: [salesOrders.id],
@@ -203,20 +222,19 @@ export const salesOrderLinesRelations = relations(
 			fields: [salesOrderLines.uomCode],
 			references: [uom.code],
 		}),
-		inventoryReservations: many(inventoryReservations),
 	}),
 );
 
 export const inventoryReservationsRelations = relations(
 	inventoryReservations,
 	({ one }) => ({
-		salesOrderLine: one(salesOrderLines, {
-			fields: [inventoryReservations.salesOrderLineId],
-			references: [salesOrderLines.id],
-		}),
 		product: one(product, {
 			fields: [inventoryReservations.productId],
 			references: [product.id],
+		}),
+		warehouse: one(warehouses, {
+			fields: [inventoryReservations.warehouseId],
+			references: [warehouses.id],
 		}),
 		batch: one(batches, {
 			fields: [inventoryReservations.batchId],

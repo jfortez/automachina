@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { inventoryLedger } from "@/db/schema/inventory";
 import {
@@ -79,11 +79,29 @@ const _createInventoryReservation = async (
 		.insert(inventoryReservations)
 		.values({
 			organizationId,
-			salesOrderLineId: orderLineId,
+			reservationType: "hard",
+			referenceType: "sales_order_line",
+			referenceId: orderLineId,
 			productId,
 			qtyInBase: qtyInBase.toString(),
 		})
 		.returning();
+};
+
+// Get inventory reservations for a sales order line
+const _getReservationsForOrderLine = async (
+	tx: Transaction,
+	orderLineId: string,
+) => {
+	return await tx
+		.select()
+		.from(inventoryReservations)
+		.where(
+			and(
+				eq(inventoryReservations.referenceType, "sales_order_line"),
+				eq(inventoryReservations.referenceId, orderLineId),
+			),
+		);
 };
 
 // Remove inventory reservation (for cancellation)
@@ -93,10 +111,13 @@ const _removeInventoryReservation = async (
 ) => {
 	return await tx
 		.delete(inventoryReservations)
-		.where(eq(inventoryReservations.salesOrderLineId, salesOrderLineId));
+		.where(
+			and(
+				eq(inventoryReservations.referenceType, "sales_order_line"),
+				eq(inventoryReservations.referenceId, salesOrderLineId),
+			),
+		);
 };
-
-// ===================== SALES ORDERS =====================
 
 export const createSalesOrder = async (
 	input: CreateSalesOrderInput,
@@ -176,58 +197,55 @@ export const createSalesOrder = async (
 
 export const fulfillSalesOrder = async (orderId: string) => {
 	return await db.transaction(async (tx) => {
-		// Get order with lines and reservations
-		const orderWithLines = await tx.query.salesOrders.findFirst({
+		// Get order
+		const order = await tx.query.salesOrders.findFirst({
 			where: eq(salesOrders.id, orderId),
-			with: {
-				salesOrderLines: {
-					with: {
-						inventoryReservations: true,
-					},
-				},
-			},
 		});
 
-		if (!orderWithLines) {
+		if (!order) {
 			throw new TRPCError({
 				code: "NOT_FOUND",
 				message: "Sales order not found",
 			});
 		}
 
-		if (orderWithLines.status === "fulfilled") {
+		if (order.status === "fulfilled") {
 			throw new TRPCError({
 				code: "BAD_REQUEST",
 				message: "Order already fulfilled",
 			});
 		}
 
+		// Get order lines
+		const lines = await tx
+			.select()
+			.from(salesOrderLines)
+			.where(eq(salesOrderLines.salesOrderId, orderId));
+
 		// Process fulfillment - deduct from inventory
-		for (const line of orderWithLines.salesOrderLines) {
-			const reservationQty = Number(
-				line.inventoryReservations?.[0]?.qtyInBase || 0,
-			);
+		for (const line of lines) {
+			// Get reservation for this line
+			const reservations = await _getReservationsForOrderLine(tx, line.id);
+			const reservationQty = Number(reservations[0]?.qtyInBase || 0);
 
 			// Deduct from inventory ledger (issue)
 			await tx.insert(inventoryLedger).values({
-				organizationId: orderWithLines.organizationId,
+				organizationId: order.organizationId,
 				productId: line.productId,
-				warehouseId: orderWithLines.warehouseId,
+				warehouseId: order.warehouseId,
 				movementType: "issue",
-				qtyInBase: reservationQty.toString(), // Positive for issue (stock calculation handles the subtraction)
+				qtyInBase: reservationQty.toString(),
 				uomCode: line.uomCode,
 				qtyInUom: Number(line.qtyOrdered).toString(),
-				note: `SO-${orderWithLines.code}`,
+				note: `SO-${order.code}`,
 				occurredAt: new Date(),
 			});
 
 			// Remove reservation
-			if (line.inventoryReservations?.[0]) {
+			if (reservations[0]) {
 				await tx
 					.delete(inventoryReservations)
-					.where(
-						eq(inventoryReservations.id, line.inventoryReservations[0].id),
-					);
+					.where(eq(inventoryReservations.id, reservations[0].id));
 			}
 		}
 
@@ -246,39 +264,37 @@ export const fulfillSalesOrder = async (orderId: string) => {
 
 export const cancelSalesOrder = async (orderId: string) => {
 	return await db.transaction(async (tx) => {
-		const orderWithLines = await tx.query.salesOrders.findFirst({
+		const order = await tx.query.salesOrders.findFirst({
 			where: eq(salesOrders.id, orderId),
-			with: {
-				salesOrderLines: {
-					with: {
-						inventoryReservations: true,
-					},
-				},
-			},
 		});
 
-		if (!orderWithLines) {
+		if (!order) {
 			throw new TRPCError({
 				code: "NOT_FOUND",
 				message: "Sales order not found",
 			});
 		}
 
-		if (["fulfilled", "cancelled"].includes(orderWithLines.status)) {
+		if (["fulfilled", "cancelled"].includes(order.status)) {
 			throw new TRPCError({
 				code: "BAD_REQUEST",
-				message: `Cannot cancel order in status: ${orderWithLines.status}`,
+				message: `Cannot cancel order in status: ${order.status}`,
 			});
 		}
 
+		// Get order lines
+		const lines = await tx
+			.select()
+			.from(salesOrderLines)
+			.where(eq(salesOrderLines.salesOrderId, orderId));
+
 		// Remove all inventory reservations for this order's lines
-		for (const line of orderWithLines.salesOrderLines) {
-			if (line.inventoryReservations?.[0]) {
+		for (const line of lines) {
+			const reservations = await _getReservationsForOrderLine(tx, line.id);
+			if (reservations[0]) {
 				await tx
 					.delete(inventoryReservations)
-					.where(
-						eq(inventoryReservations.id, line.inventoryReservations[0].id),
-					);
+					.where(eq(inventoryReservations.id, reservations[0].id));
 			}
 		}
 
@@ -291,8 +307,6 @@ export const cancelSalesOrder = async (orderId: string) => {
 		return { success: true, orderId, cancelledAt: new Date() };
 	});
 };
-
-// ===================== PURCHASE ORDERS =====================
 
 export const createPurchaseOrder = async (
 	input: CreatePurchaseOrderInput,
@@ -427,8 +441,6 @@ export const receivePurchaseOrder = async (
 		return { success: true, orderId: input.purchaseOrderId, status: newStatus };
 	});
 };
-
-// ===================== QUERY FUNCTIONS =====================
 
 // Get sales order by ID with lines and customer info
 export const getSalesOrderById = async (
@@ -660,8 +672,6 @@ export const getPurchaseOrders = async (
 	};
 };
 
-// ===================== UPDATE IMPLEMENTATIONS =====================
-
 // Update sales order - only allowed before fulfillment
 export const updateSalesOrder = async (
 	input: UpdateSalesOrderInput,
@@ -673,13 +683,6 @@ export const updateSalesOrder = async (
 		// Get current order
 		const currentOrder = await tx.query.salesOrders.findFirst({
 			where: eq(salesOrders.id, input.id),
-			with: {
-				salesOrderLines: {
-					with: {
-						inventoryReservations: true,
-					},
-				},
-			},
 		});
 
 		if (!currentOrder) {
@@ -722,17 +725,22 @@ export const updateSalesOrder = async (
 
 		// Handle line updates
 		if (input.lines && input.lines.length > 0) {
+			// Get existing lines
+			const existingLines = await tx
+				.select()
+				.from(salesOrderLines)
+				.where(eq(salesOrderLines.salesOrderId, input.id));
+
 			// Validate stock availability for new/changed lines
 			const linesForValidation = input.lines
 				.map((line) => ({
 					productId: line.id
-						? currentOrder.salesOrderLines.find((l) => l.id === line.id)
-								?.productId || ""
-						: line.productId, // New lines
-					qty: line.qtyOrdered || line.qtyOrdered || 0,
-					uomCode: line.uomCode || line.uomCode,
+						? existingLines.find((l) => l.id === line.id)?.productId || ""
+						: line.productId,
+					qty: line.qtyOrdered || 0,
+					uomCode: line.uomCode || "",
 				}))
-				.filter((line) => line.productId); // Filter valid lines
+				.filter((line) => line.productId);
 
 			await _validateOrderStock(
 				tx,
@@ -741,56 +749,37 @@ export const updateSalesOrder = async (
 			);
 
 			// Remove existing reservations
-			for (const line of currentOrder.salesOrderLines) {
-				if (line.inventoryReservations?.[0]) {
+			for (const line of existingLines) {
+				const reservations = await _getReservationsForOrderLine(tx, line.id);
+				if (reservations[0]) {
 					await tx
 						.delete(inventoryReservations)
-						.where(
-							eq(inventoryReservations.id, line.inventoryReservations[0].id),
-						);
+						.where(eq(inventoryReservations.id, reservations[0].id));
 				}
 			}
 
 			// Update existing lines and create reservations
 			for (const lineInput of input.lines) {
 				if (lineInput.id) {
-					// Update existing line
+					const existingLine = existingLines.find((l) => l.id === lineInput.id);
+					if (!existingLine) continue;
+
 					const qtyInBase = await convertUomToBase(
 						tx,
-						lineInput.productId ||
-							currentOrder.salesOrderLines.find((l) => l.id === lineInput.id)
-								?.productId ||
-							"",
-						lineInput.qtyOrdered ||
-							Number(
-								currentOrder.salesOrderLines.find((l) => l.id === lineInput.id)
-									?.qtyOrdered,
-							),
-						lineInput.uomCode ||
-							currentOrder.salesOrderLines.find((l) => l.id === lineInput.id)
-								?.uomCode ||
-							"",
-						await getBaseUom(
-							tx,
-							lineInput.productId ||
-								currentOrder.salesOrderLines.find((l) => l.id === lineInput.id)
-									?.productId ||
-								"",
-						),
+						lineInput.productId || existingLine.productId,
+						lineInput.qtyOrdered || Number(existingLine.qtyOrdered),
+						lineInput.uomCode || existingLine.uomCode,
+						await getBaseUom(tx, lineInput.productId || existingLine.productId),
 					);
 
 					await _createInventoryReservation(
 						tx,
 						lineInput.id,
 						currentOrder.organizationId,
-						lineInput.productId ||
-							currentOrder.salesOrderLines.find((l) => l.id === lineInput.id)
-								?.productId ||
-							"",
+						lineInput.productId || existingLine.productId,
 						qtyInBase,
 					);
 				}
-				// Note: New line creation would need more complex logic
 			}
 		}
 

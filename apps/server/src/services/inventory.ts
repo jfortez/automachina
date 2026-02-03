@@ -1,13 +1,26 @@
 import { TRPCError } from "@trpc/server";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { handlingUnits } from "@/db/schema/handlingUnits";
+import {
+	handlingUnitContents,
+	handlingUnitHistory,
+	handlingUnits,
+} from "@/db/schema/handlingUnits";
 import { inventoryLedger } from "@/db/schema/inventory";
+import { inventoryReservations } from "@/db/schema/orders";
 import { product as productTable, productUom } from "@/db/schema/products";
 import { uom } from "@/db/schema/uom";
+import { locations } from "@/db/schema/warehouse";
 import type {
+	AddHandlingUnitContentInput,
 	AdjustInventoryInput,
+	CreateHandlingUnitInput,
+	CreateReservationInput,
+	ExtendReservationInput,
+	MoveHandlingUnitInput,
 	ReceiveInventoryInput,
+	ReleaseReservationInput,
+	RemoveHandlingUnitContentInput,
 	SellProductInput,
 } from "@/dto/inventory";
 import type { Transaction } from "@/types";
@@ -298,5 +311,521 @@ export const adjustInventory = async (
 			productId: d.productId,
 			qtyAdjustedInBase: qtyInBase,
 		};
+	});
+};
+
+/**
+ * Creates a new handling unit at specified location
+ */
+export const createHandlingUnit = async (
+	data: CreateHandlingUnitInput,
+	organizationId: string,
+) => {
+	const location = await db.query.locations.findFirst({
+		where: eq(locations.id, data.locationId),
+	});
+
+	if (!location) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Location not found",
+		});
+	}
+
+	if (data.parentId) {
+		const parent = await db.query.handlingUnits.findFirst({
+			where: and(
+				eq(handlingUnits.id, data.parentId),
+				eq(handlingUnits.organizationId, organizationId),
+			),
+		});
+
+		if (!parent) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Parent handling unit not found",
+			});
+		}
+	}
+
+	const [unit] = await db
+		.insert(handlingUnits)
+		.values({
+			organizationId,
+			code: data.code,
+			type: data.type,
+			locationId: data.locationId,
+			warehouseId: data.warehouseId || location.warehouseId,
+			capacity: data.capacity?.toString(),
+			weightLimit: data.weightLimit?.toString(),
+			dimensions: data.dimensions,
+			parentId: data.parentId,
+		})
+		.returning();
+
+	return unit;
+};
+
+/**
+ * Moves handling unit to different location and records history
+ */
+export const moveHandlingUnit = async (
+	data: MoveHandlingUnitInput,
+	organizationId: string,
+) => {
+	return await db.transaction(async (tx) => {
+		const unit = await tx.query.handlingUnits.findFirst({
+			where: and(
+				eq(handlingUnits.id, data.id),
+				eq(handlingUnits.organizationId, organizationId),
+			),
+		});
+
+		if (!unit) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Handling unit not found",
+			});
+		}
+
+		const toLocation = await tx.query.locations.findFirst({
+			where: eq(locations.id, data.toLocationId),
+		});
+
+		if (!toLocation) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Destination location not found",
+			});
+		}
+
+		await tx.insert(handlingUnitHistory).values({
+			handlingUnitId: data.id,
+			fromLocationId: unit.locationId,
+			toLocationId: data.toLocationId,
+			notes: data.notes,
+		});
+
+		const [updated] = await tx
+			.update(handlingUnits)
+			.set({
+				locationId: data.toLocationId,
+				warehouseId: toLocation.warehouseId,
+			})
+			.where(eq(handlingUnits.id, data.id))
+			.returning();
+
+		return updated;
+	});
+};
+
+/**
+ * Adds product content to handling unit
+ */
+export const addHandlingUnitContent = async (
+	data: AddHandlingUnitContentInput,
+	organizationId: string,
+) => {
+	return await db.transaction(async (tx) => {
+		const unit = await tx.query.handlingUnits.findFirst({
+			where: and(
+				eq(handlingUnits.id, data.handlingUnitId),
+				eq(handlingUnits.organizationId, organizationId),
+			),
+		});
+
+		if (!unit) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Handling unit not found",
+			});
+		}
+
+		const product = await tx.query.product.findFirst({
+			where: eq(productTable.id, data.productId),
+		});
+
+		if (!product) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Product not found",
+			});
+		}
+
+		const qtyInBase = await convertUomToBase(
+			tx,
+			data.productId,
+			data.quantity,
+			data.uomCode,
+			product.baseUom,
+		);
+
+		const [content] = await tx
+			.insert(handlingUnitContents)
+			.values({
+				handlingUnitId: data.handlingUnitId,
+				productId: data.productId,
+				batchId: data.batchId,
+				uomCode: data.uomCode,
+				qtyInBase: qtyInBase.toString(),
+				qtyInUom: data.quantity.toString(),
+				serialNumber: data.serialNumber,
+			})
+			.returning();
+
+		return content;
+	});
+};
+
+/**
+ * Removes content from handling unit
+ */
+export const removeHandlingUnitContent = async (
+	data: RemoveHandlingUnitContentInput,
+	organizationId: string,
+) => {
+	return await db.transaction(async (tx) => {
+		const content = await tx.query.handlingUnitContents.findFirst({
+			where: eq(handlingUnitContents.id, data.contentId),
+		});
+
+		if (!content) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Content not found",
+			});
+		}
+
+		const unit = await tx.query.handlingUnits.findFirst({
+			where: and(
+				eq(handlingUnits.id, content.handlingUnitId),
+				eq(handlingUnits.organizationId, organizationId),
+			),
+		});
+
+		if (!unit) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Handling unit not found",
+			});
+		}
+
+		const currentQty = Number(content.qtyInUom);
+
+		if (data.quantity >= currentQty) {
+			await tx
+				.delete(handlingUnitContents)
+				.where(eq(handlingUnitContents.id, data.contentId));
+		} else {
+			const product = await tx.query.product.findFirst({
+				where: eq(productTable.id, content.productId),
+			});
+
+			if (!product) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Product not found",
+				});
+			}
+
+			const remainingQty = currentQty - data.quantity;
+			const qtyInBase = await convertUomToBase(
+				tx,
+				content.productId,
+				remainingQty,
+				content.uomCode || product.baseUom,
+				product.baseUom,
+			);
+
+			await tx
+				.update(handlingUnitContents)
+				.set({
+					qtyInUom: remainingQty.toString(),
+					qtyInBase: qtyInBase.toString(),
+				})
+				.where(eq(handlingUnitContents.id, data.contentId));
+		}
+
+		return { success: true };
+	});
+};
+
+/**
+ * Gets handling unit with contents
+ */
+export const getHandlingUnitById = async (
+	id: string,
+	organizationId: string,
+) => {
+	const unit = await db.query.handlingUnits.findFirst({
+		where: and(
+			eq(handlingUnits.id, id),
+			eq(handlingUnits.organizationId, organizationId),
+		),
+		with: {
+			contents: true,
+			location: true,
+			warehouse: true,
+		},
+	});
+
+	if (!unit) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Handling unit not found",
+		});
+	}
+
+	return unit;
+};
+
+/**
+ * Gets handling units by location
+ */
+export const getHandlingUnitsByLocation = async (
+	locationId: string,
+	organizationId: string,
+) => {
+	return await db.query.handlingUnits.findMany({
+		where: and(
+			eq(handlingUnits.locationId, locationId),
+			eq(handlingUnits.organizationId, organizationId),
+		),
+		with: {
+			contents: true,
+		},
+	});
+};
+
+/**
+ * Deletes handling unit if empty
+ */
+export const deleteHandlingUnit = async (
+	id: string,
+	organizationId: string,
+) => {
+	return await db.transaction(async (tx) => {
+		const unit = await tx.query.handlingUnits.findFirst({
+			where: and(
+				eq(handlingUnits.id, id),
+				eq(handlingUnits.organizationId, organizationId),
+			),
+		});
+
+		if (!unit) {
+			throw new TRPCError({
+				code: "NOT_FOUND",
+				message: "Handling unit not found",
+			});
+		}
+
+		const contents = await tx
+			.select()
+			.from(handlingUnitContents)
+			.where(eq(handlingUnitContents.handlingUnitId, id));
+
+		if (contents.length > 0) {
+			throw new TRPCError({
+				code: "CONFLICT",
+				message: "Cannot delete handling unit with contents",
+			});
+		}
+
+		await tx.delete(handlingUnits).where(eq(handlingUnits.id, id));
+
+		return { success: true };
+	});
+};
+
+/**
+ * Creates inventory reservation
+ */
+export const createReservation = async (
+	data: CreateReservationInput,
+	organizationId: string,
+) => {
+	const now = new Date();
+
+	if (data.expiresAt && data.expiresAt <= now) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Expiration date must be in the future",
+		});
+	}
+
+	return await db.transaction(async (tx) => {
+		// For hard reservations, validate sufficient stock
+		if (data.reservationType === "hard") {
+			const stock = await _getStock(
+				{
+					organizationId,
+					productId: data.productId,
+					warehouseId: data.warehouseId,
+				},
+				tx,
+			);
+			const availableStock = Number(stock?.totalQty || 0);
+
+			if (availableStock < data.qtyInBase) {
+				throw new TRPCError({
+					code: "BAD_REQUEST",
+					message: `Insufficient stock for hard reservation. Available: ${availableStock}, Requested: ${data.qtyInBase}`,
+				});
+			}
+		}
+
+		const [reservation] = await tx
+			.insert(inventoryReservations)
+			.values({
+				organizationId,
+				reservationType: data.reservationType,
+				referenceType: data.referenceType,
+				referenceId: data.referenceId,
+				productId: data.productId,
+				warehouseId: data.warehouseId,
+				batchId: data.batchId,
+				handlingUnitId: data.handlingUnitId,
+				qtyInBase: data.qtyInBase.toString(),
+				uomCode: data.uomCode,
+				expiresAt: data.expiresAt,
+				notes: data.notes,
+			})
+			.returning();
+
+		return reservation;
+	});
+};
+
+/**
+ * Releases reservation
+ */
+export const releaseReservation = async (
+	data: ReleaseReservationInput,
+	organizationId: string,
+) => {
+	const reservation = await db.query.inventoryReservations.findFirst({
+		where: and(
+			eq(inventoryReservations.id, data.id),
+			eq(inventoryReservations.organizationId, organizationId),
+		),
+	});
+
+	if (!reservation) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Reservation not found",
+		});
+	}
+
+	if (reservation.releasedAt) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Reservation already released",
+		});
+	}
+
+	const [updated] = await db
+		.update(inventoryReservations)
+		.set({
+			releasedAt: new Date(),
+			releaseReason: data.reason,
+		})
+		.where(eq(inventoryReservations.id, data.id))
+		.returning();
+
+	return updated;
+};
+
+/**
+ * Extends reservation expiration
+ */
+export const extendReservation = async (
+	data: ExtendReservationInput,
+	organizationId: string,
+) => {
+	const reservation = await db.query.inventoryReservations.findFirst({
+		where: and(
+			eq(inventoryReservations.id, data.id),
+			eq(inventoryReservations.organizationId, organizationId),
+		),
+	});
+
+	if (!reservation) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Reservation not found",
+		});
+	}
+
+	if (reservation.releasedAt) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: "Cannot extend released reservation",
+		});
+	}
+
+	const [updated] = await db
+		.update(inventoryReservations)
+		.set({ expiresAt: data.expiresAt })
+		.where(eq(inventoryReservations.id, data.id))
+		.returning();
+
+	return updated;
+};
+
+/**
+ * Gets active reservations (not released and not expired)
+ */
+export const getActiveReservations = async (organizationId: string) => {
+	const now = new Date();
+
+	return await db.query.inventoryReservations.findMany({
+		where: and(
+			eq(inventoryReservations.organizationId, organizationId),
+			// Not released (releasedAt is null)
+			isNull(inventoryReservations.releasedAt),
+			// Not expired (expiresAt is null or in the future)
+			or(
+				isNull(inventoryReservations.expiresAt),
+				gte(inventoryReservations.expiresAt, now),
+			),
+		),
+		with: {
+			product: true,
+			warehouse: true,
+		},
+	});
+};
+
+/**
+ * Gets reservations by product
+ */
+export const getReservationsByProduct = async (
+	productId: string,
+	organizationId: string,
+) => {
+	return await db.query.inventoryReservations.findMany({
+		where: and(
+			eq(inventoryReservations.productId, productId),
+			eq(inventoryReservations.organizationId, organizationId),
+		),
+		orderBy: (reservations, { desc }) => [desc(reservations.createdAt)],
+	});
+};
+
+/**
+ * Gets reservations by reference
+ */
+export const getReservationsByReference = async (
+	referenceType: string,
+	referenceId: string,
+	organizationId: string,
+) => {
+	return await db.query.inventoryReservations.findMany({
+		where: and(
+			eq(inventoryReservations.referenceType, referenceType),
+			eq(inventoryReservations.referenceId, referenceId),
+			eq(inventoryReservations.organizationId, organizationId),
+		),
 	});
 };

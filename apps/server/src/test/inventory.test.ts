@@ -4,7 +4,549 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AppRouter } from "@/routers";
 
 import { globals } from "./globals";
-import { setupTestContext } from "./util";
+import { formatNumeric, setupTestContext } from "./util";
+
+describe("Testing Handling Units", () => {
+	let ctx: Awaited<ReturnType<typeof setupTestContext>>;
+	let productId: string;
+	let locationId: string;
+
+	beforeAll(async () => {
+		ctx = await setupTestContext();
+
+		const productInput: inferProcedureInput<AppRouter["product"]["create"]> = {
+			sku: nanoid(10),
+			name: "Test Product for Handling Units",
+			baseUom: "EA",
+			trackingLevel: "lot",
+			isPhysical: true,
+			categoryId: ctx.defaultCategoryId,
+			prices: [{ uomCode: "EA", price: 1.0 }],
+		};
+
+		const createdProduct = await ctx.caller.product.create(productInput);
+		productId = createdProduct.id;
+		locationId = globals.id;
+
+		await ctx.caller.inventory.receive({
+			warehouseId: locationId,
+			productId,
+			qty: 100,
+			uomCode: "EA",
+			currency: "USD",
+		});
+	});
+
+	describe("Handling Unit CRUD", () => {
+		it.sequential("should create a pallet handling unit", async () => {
+			const createInput: inferProcedureInput<
+				AppRouter["inventory"]["handlingUnits"]["create"]
+			> = {
+				code: `PALLET-${nanoid(8)}`,
+				type: "pallet",
+				locationId,
+				capacity: 50,
+				weightLimit: 500,
+				dimensions: { length: 120, width: 100, height: 150 },
+			};
+
+			const result =
+				await ctx.caller.inventory.handlingUnits.create(createInput);
+
+			expect(result).toMatchObject({
+				code: createInput.code,
+				type: "pallet",
+				locationId,
+				capacity: formatNumeric(50),
+				weightLimit: formatNumeric(500),
+			});
+			expect(result.id).toBeDefined();
+		});
+
+		it.sequential("should create a box handling unit", async () => {
+			const createInput: inferProcedureInput<
+				AppRouter["inventory"]["handlingUnits"]["create"]
+			> = {
+				code: `BOX-${nanoid(8)}`,
+				type: "box",
+				locationId,
+				capacity: 20,
+				weightLimit: 25,
+				dimensions: { length: 40, width: 30, height: 25 },
+			};
+
+			const result =
+				await ctx.caller.inventory.handlingUnits.create(createInput);
+
+			expect(result).toMatchObject({
+				code: createInput.code,
+				type: "box",
+			});
+		});
+
+		it.sequential("should get handling unit by id with contents", async () => {
+			const createInput: inferProcedureInput<
+				AppRouter["inventory"]["handlingUnits"]["create"]
+			> = {
+				code: `PALLET-GET-${nanoid(6)}`,
+				type: "pallet",
+				locationId,
+			};
+
+			const created =
+				await ctx.caller.inventory.handlingUnits.create(createInput);
+
+			const result = await ctx.caller.inventory.handlingUnits.getById(
+				created.id,
+			);
+
+			expect(result).toMatchObject({
+				id: created.id,
+				code: createInput.code,
+			});
+			expect(result.contents).toEqual([]);
+		});
+
+		it.sequential("should get handling units by location", async () => {
+			const result =
+				await ctx.caller.inventory.handlingUnits.getByLocation(locationId);
+
+			expect(Array.isArray(result)).toBe(true);
+			expect(result.length).toBeGreaterThanOrEqual(2);
+		});
+
+		it.sequential(
+			"should move handling unit to different location",
+			async () => {
+				const createInput: inferProcedureInput<
+					AppRouter["inventory"]["handlingUnits"]["create"]
+				> = {
+					code: `PALLET-MOVE-${nanoid(6)}`,
+					type: "pallet",
+					locationId,
+				};
+
+				const created =
+					await ctx.caller.inventory.handlingUnits.create(createInput);
+
+				const newLocationId = locationId;
+				const moveInput: inferProcedureInput<
+					AppRouter["inventory"]["handlingUnits"]["move"]
+				> = {
+					id: created.id,
+					toLocationId: newLocationId,
+					notes: "Relocation for optimization",
+				};
+
+				const result = await ctx.caller.inventory.handlingUnits.move(moveInput);
+
+				expect(result.locationId).toBe(newLocationId);
+			},
+		);
+
+		it.sequential("should delete empty handling unit", async () => {
+			const createInput: inferProcedureInput<
+				AppRouter["inventory"]["handlingUnits"]["create"]
+			> = {
+				code: `PALLET-DEL-${nanoid(6)}`,
+				type: "pallet",
+				locationId,
+			};
+
+			const created =
+				await ctx.caller.inventory.handlingUnits.create(createInput);
+
+			const result = await ctx.caller.inventory.handlingUnits.delete(
+				created.id,
+			);
+
+			expect(result).toMatchObject({
+				success: true,
+			});
+		});
+
+		it.sequential.fails(
+			"should fail to delete handling unit with contents",
+			async () => {
+				const createInput: inferProcedureInput<
+					AppRouter["inventory"]["handlingUnits"]["create"]
+				> = {
+					code: `PALLET-NODEL-${nanoid(6)}`,
+					type: "pallet",
+					locationId,
+				};
+
+				const created =
+					await ctx.caller.inventory.handlingUnits.create(createInput);
+
+				await ctx.caller.inventory.handlingUnits.addContent({
+					handlingUnitId: created.id,
+					productId,
+					quantity: 10,
+					uomCode: "EA",
+					batchId: "LOT-001",
+				});
+
+				await ctx.caller.inventory.handlingUnits.delete(created.id);
+			},
+		);
+	});
+
+	describe("Handling Unit Content Management", () => {
+		let handlingUnitId: string;
+
+		beforeAll(async () => {
+			const createInput: inferProcedureInput<
+				AppRouter["inventory"]["handlingUnits"]["create"]
+			> = {
+				code: `PALLET-CONTENT-${nanoid(6)}`,
+				type: "pallet",
+				locationId,
+				capacity: 100,
+			};
+
+			const created =
+				await ctx.caller.inventory.handlingUnits.create(createInput);
+			handlingUnitId = created.id;
+		});
+
+		it.sequential("should add content to handling unit", async () => {
+			const addInput: inferProcedureInput<
+				AppRouter["inventory"]["handlingUnits"]["addContent"]
+			> = {
+				handlingUnitId,
+				productId,
+				quantity: 25,
+				uomCode: "EA",
+				batchId: "LOT-001",
+			};
+
+			const result =
+				await ctx.caller.inventory.handlingUnits.addContent(addInput);
+
+			expect(result).toMatchObject({
+				handlingUnitId,
+				productId,
+				qtyInUom: formatNumeric(25, 9),
+			});
+			expect(result.id).toBeDefined();
+		});
+
+		it.sequential("should add content with serial number", async () => {
+			const addInput: inferProcedureInput<
+				AppRouter["inventory"]["handlingUnits"]["addContent"]
+			> = {
+				handlingUnitId,
+				productId,
+				quantity: 1,
+				uomCode: "EA",
+				batchId: "LOT-002",
+				serialNumber: "SN-12345",
+			};
+
+			const result =
+				await ctx.caller.inventory.handlingUnits.addContent(addInput);
+
+			expect(result).toMatchObject({
+				serialNumber: "SN-12345",
+			});
+		});
+
+		it.sequential("should get handling unit with contents", async () => {
+			const result =
+				await ctx.caller.inventory.handlingUnits.getById(handlingUnitId);
+
+			expect(result.contents).toHaveLength(2);
+			expect(result.contents[0]).toMatchObject({
+				productId,
+				qtyInUom: "25",
+			});
+		});
+
+		it.sequential("should remove content from handling unit", async () => {
+			const unit =
+				await ctx.caller.inventory.handlingUnits.getById(handlingUnitId);
+
+			const contentId = unit.contents[0].id;
+
+			const removeInput: inferProcedureInput<
+				AppRouter["inventory"]["handlingUnits"]["removeContent"]
+			> = {
+				handlingUnitId,
+				contentId,
+				quantity: 25,
+			};
+
+			const result =
+				await ctx.caller.inventory.handlingUnits.removeContent(removeInput);
+
+			expect(result).toMatchObject({
+				success: true,
+			});
+
+			const updatedUnit =
+				await ctx.caller.inventory.handlingUnits.getById(handlingUnitId);
+			expect(updatedUnit.contents).toHaveLength(1);
+		});
+	});
+
+	describe("Nested Handling Units", () => {
+		it.sequential("should create nested handling units", async () => {
+			const parentInput: inferProcedureInput<
+				AppRouter["inventory"]["handlingUnits"]["create"]
+			> = {
+				code: `PALLET-PARENT-${nanoid(6)}`,
+				type: "pallet",
+				locationId,
+				capacity: 10,
+			};
+
+			const parent =
+				await ctx.caller.inventory.handlingUnits.create(parentInput);
+
+			const childInput: inferProcedureInput<
+				AppRouter["inventory"]["handlingUnits"]["create"]
+			> = {
+				code: `BOX-CHILD-${nanoid(6)}`,
+				type: "box",
+				locationId,
+				parentId: parent.id,
+				capacity: 20,
+			};
+
+			const child = await ctx.caller.inventory.handlingUnits.create(childInput);
+
+			expect(child.parentId).toBe(parent.id);
+		});
+	});
+});
+
+describe("Testing Inventory Reservations", () => {
+	let ctx: Awaited<ReturnType<typeof setupTestContext>>;
+	let productId: string;
+	let warehouseId: string;
+
+	beforeAll(async () => {
+		ctx = await setupTestContext();
+
+		const productInput: inferProcedureInput<AppRouter["product"]["create"]> = {
+			sku: nanoid(10),
+			name: "Test Product for Reservations",
+			baseUom: "EA",
+			trackingLevel: "none",
+			isPhysical: true,
+			categoryId: ctx.defaultCategoryId,
+			prices: [{ uomCode: "EA", price: 1.0 }],
+		};
+
+		const createdProduct = await ctx.caller.product.create(productInput);
+		productId = createdProduct.id;
+		warehouseId = globals.warehouse.id;
+
+		await ctx.caller.inventory.receive({
+			warehouseId,
+			productId,
+			qty: 100,
+			uomCode: "EA",
+			currency: "USD",
+		});
+	});
+
+	describe("Reservation CRUD", () => {
+		it.sequential("should create a soft reservation", async () => {
+			const createInput: inferProcedureInput<
+				AppRouter["inventory"]["reservations"]["create"]
+			> = {
+				productId,
+				warehouseId,
+				qtyInBase: 10,
+				uomCode: "EA",
+				reservationType: "soft",
+				referenceType: "sales_order",
+				referenceId: `SO-${nanoid(6)}`,
+				expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+				notes: "Soft reservation for sales order",
+			};
+
+			const result =
+				await ctx.caller.inventory.reservations.create(createInput);
+
+			expect(result).toMatchObject({
+				productId,
+				warehouseId,
+				qtyInBase: formatNumeric(10, 9),
+				reservationType: "soft",
+				referenceType: "sales_order",
+			});
+			expect(result.id).toBeDefined();
+		});
+
+		it.sequential("should create a hard reservation", async () => {
+			const createInput: inferProcedureInput<
+				AppRouter["inventory"]["reservations"]["create"]
+			> = {
+				productId,
+				warehouseId,
+				qtyInBase: 15,
+				uomCode: "EA",
+				reservationType: "hard",
+				referenceType: "sales_order",
+				referenceId: `SO-${nanoid(6)}`,
+				expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+				notes: "Hard reservation - blocks inventory",
+			};
+
+			const result =
+				await ctx.caller.inventory.reservations.create(createInput);
+
+			expect(result).toMatchObject({
+				qtyInBase: formatNumeric(15, 9),
+				reservationType: "hard",
+			});
+		});
+
+		it.sequential("should get active reservations", async () => {
+			const result = await ctx.caller.inventory.reservations.getActive();
+
+			expect(Array.isArray(result)).toBe(true);
+			expect(result.length).toBeGreaterThanOrEqual(2);
+		});
+
+		it.sequential("should get reservations by product", async () => {
+			const result =
+				await ctx.caller.inventory.reservations.getByProduct(productId);
+
+			expect(Array.isArray(result)).toBe(true);
+			expect(result.every((r) => r.productId === productId)).toBe(true);
+		});
+
+		it.sequential("should get reservations by reference", async () => {
+			const referenceId = `SO-REF-${nanoid(6)}`;
+			await ctx.caller.inventory.reservations.create({
+				productId,
+				warehouseId,
+				qtyInBase: 5,
+				uomCode: "EA",
+				reservationType: "soft",
+				referenceType: "sales_order",
+				referenceId,
+				expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+			});
+
+			const result = await ctx.caller.inventory.reservations.getByReference({
+				referenceType: "sales_order",
+				referenceId,
+			});
+
+			expect(result).toHaveLength(1);
+			expect(result[0].referenceId).toBe(referenceId);
+		});
+	});
+
+	describe("Reservation Lifecycle", () => {
+		it.sequential("should release a reservation", async () => {
+			const created = await ctx.caller.inventory.reservations.create({
+				productId,
+				warehouseId,
+				qtyInBase: 10,
+				uomCode: "EA",
+				reservationType: "soft",
+				referenceType: "sales_order",
+				referenceId: `SO-REL-${nanoid(6)}`,
+				expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+			});
+
+			const releaseInput: inferProcedureInput<
+				AppRouter["inventory"]["reservations"]["release"]
+			> = {
+				id: created.id,
+			};
+
+			const result =
+				await ctx.caller.inventory.reservations.release(releaseInput);
+
+			expect(result).toMatchObject({
+				id: created.id,
+			});
+			expect(result.releasedAt).toBeDefined();
+		});
+
+		it.sequential("should extend a reservation", async () => {
+			const created = await ctx.caller.inventory.reservations.create({
+				productId,
+				warehouseId,
+				qtyInBase: 10,
+				uomCode: "EA",
+				reservationType: "soft",
+				referenceType: "sales_order",
+				referenceId: `SO-EXT-${nanoid(6)}`,
+				expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+			});
+
+			const originalExpiry = created.expiresAt
+				? new Date(created.expiresAt).getTime()
+				: 0;
+
+			const newExpiry = new Date(Date.now() + 72 * 60 * 60 * 1000);
+			const extendInput: inferProcedureInput<
+				AppRouter["inventory"]["reservations"]["extend"]
+			> = {
+				id: created.id,
+				expiresAt: newExpiry,
+			};
+
+			const result =
+				await ctx.caller.inventory.reservations.extend(extendInput);
+
+			const newExpiryTime = result.expiresAt
+				? new Date(result.expiresAt).getTime()
+				: 0;
+			expect(newExpiryTime).toBeGreaterThan(originalExpiry);
+		});
+
+		it.sequential.fails(
+			"should fail to release already released reservation",
+			async () => {
+				const created = await ctx.caller.inventory.reservations.create({
+					productId,
+					warehouseId,
+					qtyInBase: 5,
+					uomCode: "EA",
+					reservationType: "soft",
+					referenceType: "sales_order",
+					referenceId: `SO-DOUBLE-${nanoid(6)}`,
+					expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+				});
+
+				await ctx.caller.inventory.reservations.release({
+					id: created.id,
+				});
+
+				await ctx.caller.inventory.reservations.release({
+					id: created.id,
+				});
+			},
+		);
+	});
+
+	describe("Reservation with Insufficient Stock", () => {
+		it.sequential.fails(
+			"should fail to create hard reservation with insufficient stock",
+			async () => {
+				await ctx.caller.inventory.reservations.create({
+					productId,
+					warehouseId,
+					qtyInBase: 1000,
+					uomCode: "EA",
+					reservationType: "hard",
+					referenceType: "sales_order",
+					referenceId: `SO-FAIL-${nanoid(6)}`,
+					expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+				});
+			},
+		);
+	});
+});
 
 describe("Testing  Inventory for default uom_conversion", () => {
 	let ctx: Awaited<ReturnType<typeof setupTestContext>>;
@@ -63,8 +605,8 @@ describe("Testing  Inventory for default uom_conversion", () => {
 			warehouseId: globals.id,
 			productId: productId,
 			lines: [
-				{ qty: 1, uomCode: "PK" }, //6
-				{ qty: 8, uomCode: "EA" }, //8
+				{ qty: 1, uomCode: "PK" }, //1 * 6
+				{ qty: 8, uomCode: "EA" }, //8 * 1
 			], //14
 		};
 
@@ -242,7 +784,6 @@ describe("Testing Inventory Adjustments", () => {
 		const createdProduct = await caller.product.create(productInput);
 		productId = createdProduct.id;
 
-		// Start with 50 EA (5 PK) stock for adjustment testing
 		const receiveInput: inferProcedureInput<AppRouter["inventory"]["receive"]> =
 			{
 				warehouseId: globals.id,
@@ -305,7 +846,6 @@ describe("Testing Inventory Adjustments", () => {
 				qtyAdjustedInBase: 20, // 2 * 10
 			});
 
-			// Check stock increased by 20 EA (2 PK)
 			const stock = await ctx.caller.product.getStock({
 				productId,
 				warehouseId: globals.id,
@@ -336,7 +876,6 @@ describe("Testing Inventory Adjustments", () => {
 			qtyAdjustedInBase: 10,
 		});
 
-		// Check stock decreased by 10 EA
 		const stock = await ctx.caller.product.getStock({
 			productId,
 			warehouseId: globals.id,
@@ -368,13 +907,12 @@ describe("Testing Inventory Adjustments", () => {
 	it.sequential.fails("should fail for non-physical products", async () => {
 		const { caller, defaultCategoryId } = ctx;
 
-		// Create non-physical product
 		const nonPhysicalProduct = await caller.product.create({
 			sku: nanoid(10),
 			name: "Service Product",
 			baseUom: "EA",
 			trackingLevel: "none",
-			isPhysical: false, // Non-physical
+			isPhysical: false,
 			categoryId: defaultCategoryId,
 			prices: [{ uomCode: "EA", price: 10.0 }],
 		});
@@ -421,8 +959,6 @@ describe("Testing Inventory Adjustments", () => {
 		expect(result).toMatchObject({
 			success: true,
 		});
-
-		// Note: Cannot directly verify ledger notes in this test, but the function should handle it
 	});
 });
 
@@ -435,7 +971,6 @@ describe("Testing Inventory with Product Prices", () => {
 	beforeAll(async () => {
 		ctx = await setupTestContext();
 
-		// Crear producto con precios específicos por UOM
 		const productInput: inferProcedureInput<AppRouter["product"]["create"]> = {
 			sku: `SKU_PRICES_${nanoid(8)}`,
 			name: "Product with Multiple UOM Prices",
