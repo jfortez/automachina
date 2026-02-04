@@ -1,5 +1,6 @@
 import type { inferProcedureInput } from "@trpc/server";
 import { beforeAll, describe, expect, it } from "vitest";
+import { logger } from "@/lib/logger";
 import type { AppRouter } from "@/routers";
 import { createCaller } from "@/routers";
 import { setupTestContext } from "./util";
@@ -21,7 +22,8 @@ describe("Authentication & Tenancy Security", () => {
 
 		it("should reject requests without authentication", async () => {
 			const unauthenticatedCaller = createCaller({
-				session: null as any,
+				session: null,
+				logger,
 			});
 			await expect(unauthenticatedCaller.profile()).rejects.toThrow(
 				"Authentication required",
@@ -76,7 +78,8 @@ describe("Authentication & Tenancy Security", () => {
 	describe("Protected Endpoints", () => {
 		it("should require authentication for protected procedures", async () => {
 			const unauthenticatedCaller = createCaller({
-				session: null as any,
+				session: null,
+				logger,
 			});
 			await expect(
 				unauthenticatedCaller.product.create({
@@ -112,7 +115,8 @@ describe("Authentication & Tenancy Security", () => {
 				session: {
 					user: mockUser,
 					session: mockSession,
-				} as any,
+				},
+				logger,
 			});
 			await expect(fakeOrgCaller.product.getByOrg()).rejects.toThrow(
 				"User is not a member of this organization",

@@ -25,7 +25,7 @@ import type {
 } from "@/dto/inventory";
 import type { Transaction } from "@/types";
 import { _getStock } from "./product";
-import { convertUomToBase } from "./uom";
+import { convertUomToBase, convertWeight } from "./uom";
 
 /**
  * Validates product exists and is physical, returns basic product data
@@ -358,6 +358,7 @@ export const createHandlingUnit = async (
 			warehouseId: data.warehouseId || location.warehouseId,
 			capacity: data.capacity?.toString(),
 			weightLimit: data.weightLimit?.toString(),
+			weightLimitUom: data.weightLimitUom,
 			dimensions: data.dimensions,
 			parentId: data.parentId,
 		})
@@ -441,9 +442,15 @@ export const addHandlingUnitContent = async (
 			});
 		}
 
-		const product = await tx.query.product.findFirst({
-			where: eq(productTable.id, data.productId),
-		});
+		const [product] = await tx
+			.select({
+				id: productTable.id,
+				baseUom: productTable.baseUom,
+				weight: productTable.weight,
+				weightUom: productTable.weightUom,
+			})
+			.from(productTable)
+			.where(eq(productTable.id, data.productId));
 
 		if (!product) {
 			throw new TRPCError({
@@ -459,6 +466,70 @@ export const addHandlingUnitContent = async (
 			data.uomCode,
 			product.baseUom,
 		);
+
+		const currentContents = await tx
+			.select()
+			.from(handlingUnitContents)
+			.where(eq(handlingUnitContents.handlingUnitId, data.handlingUnitId));
+
+		if (unit.capacity) {
+			const currentQty = currentContents.reduce(
+				(sum, c) => sum + Number(c.qtyInUom),
+				0,
+			);
+			const newTotalQty = currentQty + data.quantity;
+
+			if (newTotalQty > Number(unit.capacity)) {
+				throw new TRPCError({
+					code: "CONFLICT",
+					message: `Adding ${data.quantity} units would exceed handling unit capacity of ${unit.capacity} (current: ${currentQty})`,
+				});
+			}
+		}
+
+		if (
+			unit.weightLimit &&
+			product.weight &&
+			unit.weightLimitUom &&
+			product.weightUom
+		) {
+			let currentWeightInLimitUom = 0;
+
+			for (const content of currentContents) {
+				const contentProduct = await tx.query.product.findFirst({
+					where: eq(productTable.id, content.productId),
+				});
+
+				if (contentProduct?.weight && contentProduct.weightUom) {
+					const contentWeight =
+						Number(content.qtyInUom) * Number(contentProduct.weight);
+					const convertedWeight = await convertWeight(
+						tx,
+						contentWeight,
+						contentProduct.weightUom,
+						unit.weightLimitUom,
+					);
+					currentWeightInLimitUom += convertedWeight;
+				}
+			}
+
+			const newProductWeight = data.quantity * Number(product.weight);
+			const newWeightInLimitUom = await convertWeight(
+				tx,
+				newProductWeight,
+				product.weightUom,
+				unit.weightLimitUom,
+			);
+
+			const newTotalWeight = currentWeightInLimitUom + newWeightInLimitUom;
+
+			if (newTotalWeight > Number(unit.weightLimit)) {
+				throw new TRPCError({
+					code: "CONFLICT",
+					message: `Adding ${data.quantity} units would exceed handling unit weight limit of ${unit.weightLimit}${unit.weightLimitUom} (current: ${currentWeightInLimitUom.toFixed(2)}${unit.weightLimitUom})`,
+				});
+			}
+		}
 
 		const [content] = await tx
 			.insert(handlingUnitContents)

@@ -576,3 +576,39 @@ export const getBaseUom = async (
 
 	return product.baseUom as string;
 };
+
+/**
+ * Converts weight from one UOM to another using uomConversion table
+ * @param tx Database transaction
+ * @param weight Weight value to convert
+ * @param fromUom Source weight UOM (e.g., "lb", "kg", "g")
+ * @param toUom Target weight UOM (e.g., "kg")
+ * @returns Converted weight value
+ */
+export const convertWeight = async (
+	tx: Transaction,
+	weight: number,
+	fromUom: string,
+	toUom: string,
+): Promise<number> => {
+	if (fromUom === toUom) {
+		return weight;
+	}
+
+	const [conversion] = await tx
+		.select({ factor: uomConversion.factor })
+		.from(uomConversion)
+		.where(
+			and(eq(uomConversion.fromUom, fromUom), eq(uomConversion.toUom, toUom)),
+		)
+		.limit(1);
+
+	if (!conversion) {
+		throw new TRPCError({
+			code: "BAD_REQUEST",
+			message: `No weight conversion from ${fromUom} to ${toUom}. Please configure UOM conversion in Settings > Units of Measure.`,
+		});
+	}
+
+	return weight * Number(conversion.factor);
+};

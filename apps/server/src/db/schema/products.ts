@@ -71,6 +71,8 @@ export const product = pgTable(
 		defaultCost: numeric("default_cost", { precision: 28, scale: 9 }),
 		defaultCurrency: text("default_currency").notNull().default("USD"),
 		isPhysical: boolean("is_physical").default(true).notNull(),
+		weight: numeric("weight", { precision: 18, scale: 6 }),
+		weightUom: text("weight_uom").references(() => uom.code),
 		...timestamps,
 	},
 	(t) => [unique().on(t.organizationId, t.sku)],
@@ -93,6 +95,10 @@ export const productRelations = relations(product, ({ one, many }) => ({
 	identifiers: many(productIdentifiers),
 	uoms: many(productUom),
 	prices: many(productPrice),
+	weightUomRel: one(uom, {
+		fields: [product.weightUom],
+		references: [uom.code],
+	}),
 }));
 
 export const productCategoryRelations = relations(

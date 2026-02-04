@@ -1,6 +1,5 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
-import type z from "zod";
 import { db } from "@/db";
 import { organization } from "@/db/schema/auth";
 import { inventoryLedger } from "@/db/schema/inventory";
@@ -147,6 +146,8 @@ const createProduct = async (
 				suggestedRetailPrice: input.suggestedRetailPrice,
 				defaultCost: input.defaultCost,
 				defaultCurrency: input.defaultCurrency,
+				weight: input.weight?.toString(),
+				weightUom: input.weightUom,
 			})
 			.returning();
 

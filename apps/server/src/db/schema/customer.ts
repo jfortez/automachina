@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { jsonb, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, text, unique } from "drizzle-orm/pg-core";
 import { organization } from "./auth";
 import { uuidPk } from "./utils";
 

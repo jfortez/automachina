@@ -1,5 +1,6 @@
 import type { Context as HonoContext } from "hono";
 import { auth } from "./auth";
+import { logger } from "./logger";
 
 export type CreateContextOptions = {
 	context: HonoContext;
@@ -11,6 +12,9 @@ export async function createContextInner({ headers }: { headers: Headers }) {
 	});
 	return {
 		session,
+		logger: session?.user?.id
+			? logger.child({ userId: session.user.id })
+			: logger,
 	};
 }
 

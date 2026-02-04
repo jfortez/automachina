@@ -57,7 +57,7 @@ const ProductForm = hoc(({ close }) => {
 	);
 	const { session } = useAuth();
 
-	const fields: FieldKit<typeof formSchema>[] = [
+	const _fields: FieldKit<typeof formSchema>[] = [
 		{
 			name: "sku",
 			label: "SKU",
@@ -180,7 +180,7 @@ const ProductForm = hoc(({ close }) => {
 		// },
 	];
 
-	const handleSubmit = async (values: z.core.output<typeof formSchema>) => {
+	const _handleSubmit = async (values: z.core.output<typeof formSchema>) => {
 		await mutateAsync({
 			...values,
 			prices: [],

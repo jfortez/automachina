@@ -56,6 +56,8 @@ export const createProduct = z.object({
 	defaultCurrency: z.string().default("USD"),
 	prices: z.array(productPrice).optional(),
 	identifiers: z.array(productIdentifier).optional(),
+	weight: z.number().min(0).optional(),
+	weightUom: z.string().optional(),
 });
 
 export const createProductCategory = z.object({

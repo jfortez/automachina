@@ -92,18 +92,15 @@ describe("Testing Invoice Management System", () => {
 			expect(retrieved.items[0].productId).toBe(product.id);
 		});
 
-		it.sequential(
-			"should get invoice by ID - non-existing invoice",
-			async () => {
-				const { caller } = ctx;
+		it.sequential("should get invoice by ID - non-existing invoice", async () => {
+			const { caller } = ctx;
 
-				await expect(
-					caller.invoice.getById({
-						id: "non-existing-id",
-					}),
-				).rejects.toThrow("Invoice not found");
-			},
-		);
+			await expect(
+				caller.invoice.getById({
+					id: "non-existing-id",
+				}),
+			).rejects.toThrow("Invoice not found");
+		});
 
 		it.sequential("should list invoices with filters", async () => {
 			const { caller } = ctx;
@@ -357,23 +354,20 @@ describe("Testing Invoice Management System", () => {
 			expect(true).toBe(true);
 		});
 
-		it.sequential(
-			"should delete invoice - non-draft invoice (should fail)",
-			async () => {
-				const { caller } = ctx;
+		it.sequential("should delete invoice - non-draft invoice (should fail)", async () => {
+			const { caller } = ctx;
 
-				// Create issued invoice
-				const customerInput: inferProcedureInput<
-					AppRouter["customer"]["create"]
-				> = {
-					code: `DELETE_FAIL_CUST_${Date.now()}`,
-					name: "Customer for Delete Fail Test",
-				};
-				const customer = (await caller.customer.create(customerInput))[0];
+			// Create issued invoice
+			const customerInput: inferProcedureInput<
+				AppRouter["customer"]["create"]
+			> = {
+				code: `DELETE_FAIL_CUST_${Date.now()}`,
+				name: "Customer for Delete Fail Test",
+			};
+			const customer = (await caller.customer.create(customerInput))[0];
 
-				const productInput: inferProcedureInput<
-					AppRouter["product"]["create"]
-				> = {
+			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
+				{
 					sku: `DELETE_FAIL_SKU_${Date.now()}`,
 					name: "Product for Delete Fail Test",
 					baseUom: "EA",
@@ -381,50 +375,49 @@ describe("Testing Invoice Management System", () => {
 					trackingLevel: "none",
 					isPhysical: true,
 				};
-				const product = await caller.product.create(productInput);
+			const product = await caller.product.create(productInput);
 
-				await caller.inventory.receive({
-					productId: product.id,
-					qty: 20,
-					uomCode: "EA",
-					currency: "USD",
-					warehouseId: globals.warehouse.id,
-				});
+			await caller.inventory.receive({
+				productId: product.id,
+				qty: 20,
+				uomCode: "EA",
+				currency: "USD",
+				warehouseId: globals.warehouse.id,
+			});
 
-				const orderInput: inferProcedureInput<
-					AppRouter["order"]["sales"]["create"]
-				> = {
-					customerId: customer.id,
-					warehouseId: globals.warehouse.id,
-					lines: [
-						{
-							productId: product.id,
-							qtyOrdered: 5,
-							uomCode: "EA",
-							pricePerUom: 15.0,
-						},
-					],
-				};
-				const order = await caller.order.sales.create(orderInput);
-				await caller.order.sales.fulfill(order.order.id);
+			const orderInput: inferProcedureInput<
+				AppRouter["order"]["sales"]["create"]
+			> = {
+				customerId: customer.id,
+				warehouseId: globals.warehouse.id,
+				lines: [
+					{
+						productId: product.id,
+						qtyOrdered: 5,
+						uomCode: "EA",
+						pricePerUom: 15.0,
+					},
+				],
+			};
+			const order = await caller.order.sales.create(orderInput);
+			await caller.order.sales.fulfill(order.order.id);
 
-				const invoiceInput: inferProcedureInput<
-					AppRouter["invoice"]["generateFromOrder"]
-				> = {
-					orderId: order.order.id,
-					orderType: "sales",
-				};
-				const generatedInvoice =
-					await caller.invoice.generateFromOrder(invoiceInput);
+			const invoiceInput: inferProcedureInput<
+				AppRouter["invoice"]["generateFromOrder"]
+			> = {
+				orderId: order.order.id,
+				orderType: "sales",
+			};
+			const generatedInvoice =
+				await caller.invoice.generateFromOrder(invoiceInput);
 
-				// Try to delete issued invoice (should fail)
-				await expect(
-					caller.invoice.delete({
-						id: generatedInvoice.invoice.id,
-					}),
-				).rejects.toThrow("Only draft invoices can be deleted");
-			},
-		);
+			// Try to delete issued invoice (should fail)
+			await expect(
+				caller.invoice.delete({
+					id: generatedInvoice.invoice.id,
+				}),
+			).rejects.toThrow("Only draft invoices can be deleted");
+		});
 
 		it.sequential("should mark invoice as paid - issued invoice", async () => {
 			const { caller } = ctx;
@@ -492,23 +485,20 @@ describe("Testing Invoice Management System", () => {
 			expect(paidInvoice.paidAt).toBeDefined();
 		});
 
-		it.sequential(
-			"should mark invoice as paid - already paid invoice",
-			async () => {
-				const { caller } = ctx;
+		it.sequential("should mark invoice as paid - already paid invoice", async () => {
+			const { caller } = ctx;
 
-				// Create and pay invoice
-				const customerInput: inferProcedureInput<
-					AppRouter["customer"]["create"]
-				> = {
-					code: `ALREADY_PAID_CUST_${Date.now()}`,
-					name: "Customer for Already Paid Test",
-				};
-				const customer = (await caller.customer.create(customerInput))[0];
+			// Create and pay invoice
+			const customerInput: inferProcedureInput<
+				AppRouter["customer"]["create"]
+			> = {
+				code: `ALREADY_PAID_CUST_${Date.now()}`,
+				name: "Customer for Already Paid Test",
+			};
+			const customer = (await caller.customer.create(customerInput))[0];
 
-				const productInput: inferProcedureInput<
-					AppRouter["product"]["create"]
-				> = {
+			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
+				{
 					sku: `ALREADY_PAID_SKU_${Date.now()}`,
 					name: "Product for Already Paid Test",
 					baseUom: "EA",
@@ -516,55 +506,54 @@ describe("Testing Invoice Management System", () => {
 					trackingLevel: "none",
 					isPhysical: true,
 				};
-				const product = await caller.product.create(productInput);
+			const product = await caller.product.create(productInput);
 
-				await caller.inventory.receive({
-					productId: product.id,
-					qty: 20,
-					uomCode: "EA",
-					currency: "USD",
-					warehouseId: globals.warehouse.id,
-				});
+			await caller.inventory.receive({
+				productId: product.id,
+				qty: 20,
+				uomCode: "EA",
+				currency: "USD",
+				warehouseId: globals.warehouse.id,
+			});
 
-				const orderInput: inferProcedureInput<
-					AppRouter["order"]["sales"]["create"]
-				> = {
-					customerId: customer.id,
-					warehouseId: globals.warehouse.id,
-					lines: [
-						{
-							productId: product.id,
-							qtyOrdered: 5,
-							uomCode: "EA",
-							pricePerUom: 15.0,
-						},
-					],
-				};
-				const order = await caller.order.sales.create(orderInput);
-				await caller.order.sales.fulfill(order.order.id);
+			const orderInput: inferProcedureInput<
+				AppRouter["order"]["sales"]["create"]
+			> = {
+				customerId: customer.id,
+				warehouseId: globals.warehouse.id,
+				lines: [
+					{
+						productId: product.id,
+						qtyOrdered: 5,
+						uomCode: "EA",
+						pricePerUom: 15.0,
+					},
+				],
+			};
+			const order = await caller.order.sales.create(orderInput);
+			await caller.order.sales.fulfill(order.order.id);
 
-				const invoiceInput: inferProcedureInput<
-					AppRouter["invoice"]["generateFromOrder"]
-				> = {
-					orderId: order.order.id,
-					orderType: "sales",
-				};
-				const generatedInvoice =
-					await caller.invoice.generateFromOrder(invoiceInput);
+			const invoiceInput: inferProcedureInput<
+				AppRouter["invoice"]["generateFromOrder"]
+			> = {
+				orderId: order.order.id,
+				orderType: "sales",
+			};
+			const generatedInvoice =
+				await caller.invoice.generateFromOrder(invoiceInput);
 
-				// Mark as paid first time
-				await caller.invoice.markAsPaid({
+			// Mark as paid first time
+			await caller.invoice.markAsPaid({
+				id: generatedInvoice.invoice.id,
+			});
+
+			// Try to mark as paid again (should fail)
+			await expect(
+				caller.invoice.markAsPaid({
 					id: generatedInvoice.invoice.id,
-				});
-
-				// Try to mark as paid again (should fail)
-				await expect(
-					caller.invoice.markAsPaid({
-						id: generatedInvoice.invoice.id,
-					}),
-				).rejects.toThrow("Only issued invoices can be marked as paid");
-			},
-		);
+				}),
+			).rejects.toThrow("Only issued invoices can be marked as paid");
+		});
 	});
 
 	describe("Invoice Generation", () => {

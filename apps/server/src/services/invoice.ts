@@ -172,7 +172,7 @@ async function calculateApplicableTaxes(
 async function calculateAutomaticDiscounts(
 	tx: Transaction,
 	organizationId: string,
-	orderItems: OrderItemForCalculation[],
+	_orderItems: OrderItemForCalculation[],
 ): Promise<AppliedDiscount[]> {
 	// Get organization discount settings
 	const [orgSettings] = await tx

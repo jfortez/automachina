@@ -8,9 +8,8 @@ import type React from "react";
 import { useMemo } from "react";
 import { Spinner } from "@/components/ui/spinner";
 
-type InferQueryData<T> = T extends UseQueryOptions<infer TData, any, any, any>
-	? TData
-	: never;
+type InferQueryData<T> =
+	T extends UseQueryOptions<infer TData, any, any, any> ? TData : never;
 
 type InferQueryOptionsFromFn<T> = T extends (...args: any[]) => infer R ? R : T;
 

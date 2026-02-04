@@ -1,6 +1,7 @@
 import type { organization } from "@/db/schema/auth";
 import { DEFAULT_USERS } from "@/db/seed/data";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 import { createCaller } from "@/routers";
 import { globals } from "./globals";
 
@@ -33,6 +34,7 @@ export async function setupTestContext(): Promise<TestContext> {
 				updatedAt: new Date(),
 			},
 		},
+		logger: logger.child({ test: true }),
 	});
 
 	return {

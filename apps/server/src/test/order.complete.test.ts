@@ -75,18 +75,15 @@ describe("Testing Extended Order Management System", () => {
 			expect(retrieved.lines[0].qtyOrdered).toBe("5");
 		});
 
-		it.sequential(
-			"should get sales order by ID - non-existing order",
-			async () => {
-				const { caller } = ctx;
+		it.sequential("should get sales order by ID - non-existing order", async () => {
+			const { caller } = ctx;
 
-				await expect(
-					caller.order.sales.getById({
-						id: "non-existing-id",
-					}),
-				).rejects.toThrow("Sales order not found");
-			},
-		);
+			await expect(
+				caller.order.sales.getById({
+					id: "non-existing-id",
+				}),
+			).rejects.toThrow("Sales order not found");
+		});
 
 		it.sequential("should list sales orders with filters", async () => {
 			const { caller } = ctx;
@@ -212,24 +209,21 @@ describe("Testing Extended Order Management System", () => {
 			expect(paginatedList.orders.length).toBeLessThanOrEqual(2);
 		});
 
-		it.sequential(
-			"should update sales order - valid update before fulfillment",
-			async () => {
-				const { caller } = ctx;
+		it.sequential("should update sales order - valid update before fulfillment", async () => {
+			const { caller } = ctx;
 
-				// Create customer
-				const customerInput: inferProcedureInput<
-					AppRouter["customer"]["create"]
-				> = {
-					code: `UPDATE_SO_CUST_${Date.now()}`,
-					name: "Customer for Update SO Test",
-				};
-				const customer = (await caller.customer.create(customerInput))[0];
+			// Create customer
+			const customerInput: inferProcedureInput<
+				AppRouter["customer"]["create"]
+			> = {
+				code: `UPDATE_SO_CUST_${Date.now()}`,
+				name: "Customer for Update SO Test",
+			};
+			const customer = (await caller.customer.create(customerInput))[0];
 
-				// Create product with sufficient stock
-				const productInput: inferProcedureInput<
-					AppRouter["product"]["create"]
-				> = {
+			// Create product with sufficient stock
+			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
+				{
 					sku: `UPDATE_SO_SKU_${Date.now()}`,
 					name: "Product for Update SO Test",
 					baseUom: "EA",
@@ -237,64 +231,60 @@ describe("Testing Extended Order Management System", () => {
 					trackingLevel: "none",
 					isPhysical: true,
 				};
-				const product = await caller.product.create(productInput);
+			const product = await caller.product.create(productInput);
 
-				await caller.inventory.receive({
-					productId: product.id,
-					qty: 30,
-					uomCode: "EA",
-					currency: "USD",
-					warehouseId: globals.warehouse.id,
-				});
+			await caller.inventory.receive({
+				productId: product.id,
+				qty: 30,
+				uomCode: "EA",
+				currency: "USD",
+				warehouseId: globals.warehouse.id,
+			});
 
-				// Create sales order
-				const orderInput: inferProcedureInput<
-					AppRouter["order"]["sales"]["create"]
-				> = {
-					customerId: customer.id,
-					warehouseId: globals.warehouse.id,
-					lines: [
-						{
-							productId: product.id,
-							qtyOrdered: 5,
-							uomCode: "EA",
-							pricePerUom: 15.0,
-						},
-					],
-					notes: "Original notes",
-				};
-				const createdOrder = await caller.order.sales.create(orderInput);
+			// Create sales order
+			const orderInput: inferProcedureInput<
+				AppRouter["order"]["sales"]["create"]
+			> = {
+				customerId: customer.id,
+				warehouseId: globals.warehouse.id,
+				lines: [
+					{
+						productId: product.id,
+						qtyOrdered: 5,
+						uomCode: "EA",
+						pricePerUom: 15.0,
+					},
+				],
+				notes: "Original notes",
+			};
+			const createdOrder = await caller.order.sales.create(orderInput);
 
-				// Update order (change status, notes, warehouse)
-				const updatedOrder = await caller.order.sales.update({
-					id: createdOrder.order.id,
-					status: "processing",
-					notes: "Updated notes",
-					warehouseId: globals.warehouse.id, // Keep same warehouse
-				});
+			// Update order (change status, notes, warehouse)
+			const updatedOrder = await caller.order.sales.update({
+				id: createdOrder.order.id,
+				status: "processing",
+				notes: "Updated notes",
+				warehouseId: globals.warehouse.id, // Keep same warehouse
+			});
 
-				expect(updatedOrder.order.notes).toBe("Original notes");
-				expect(updatedOrder.order.warehouseId).toBe(globals.warehouse.id);
-			},
-		);
+			expect(updatedOrder.order.notes).toBe("Original notes");
+			expect(updatedOrder.order.warehouseId).toBe(globals.warehouse.id);
+		});
 
-		it.sequential(
-			"should update sales order - invalid update after fulfillment",
-			async () => {
-				const { caller } = ctx;
+		it.sequential("should update sales order - invalid update after fulfillment", async () => {
+			const { caller } = ctx;
 
-				// Create order, fulfill it, then try to update
-				const customerInput: inferProcedureInput<
-					AppRouter["customer"]["create"]
-				> = {
-					code: `UPDATE_FAIL_SO_CUST_${Date.now()}`,
-					name: "Customer for Update Fail SO Test",
-				};
-				const customer = (await caller.customer.create(customerInput))[0];
+			// Create order, fulfill it, then try to update
+			const customerInput: inferProcedureInput<
+				AppRouter["customer"]["create"]
+			> = {
+				code: `UPDATE_FAIL_SO_CUST_${Date.now()}`,
+				name: "Customer for Update Fail SO Test",
+			};
+			const customer = (await caller.customer.create(customerInput))[0];
 
-				const productInput: inferProcedureInput<
-					AppRouter["product"]["create"]
-				> = {
+			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
+				{
 					sku: `UPDATE_FAIL_SO_SKU_${Date.now()}`,
 					name: "Product for Update Fail SO Test",
 					baseUom: "EA",
@@ -302,65 +292,61 @@ describe("Testing Extended Order Management System", () => {
 					trackingLevel: "none",
 					isPhysical: true,
 				};
-				const product = await caller.product.create(productInput);
+			const product = await caller.product.create(productInput);
 
-				await caller.inventory.receive({
-					productId: product.id,
-					qty: 20,
-					uomCode: "EA",
-					currency: "USD",
-					warehouseId: globals.warehouse.id,
-				});
+			await caller.inventory.receive({
+				productId: product.id,
+				qty: 20,
+				uomCode: "EA",
+				currency: "USD",
+				warehouseId: globals.warehouse.id,
+			});
 
-				const orderInput: inferProcedureInput<
-					AppRouter["order"]["sales"]["create"]
-				> = {
-					customerId: customer.id,
-					warehouseId: globals.warehouse.id,
-					lines: [
-						{
-							productId: product.id,
-							qtyOrdered: 5,
-							uomCode: "EA",
-							pricePerUom: 15.0,
-						},
-					],
-				};
-				const createdOrder = await caller.order.sales.create(orderInput);
+			const orderInput: inferProcedureInput<
+				AppRouter["order"]["sales"]["create"]
+			> = {
+				customerId: customer.id,
+				warehouseId: globals.warehouse.id,
+				lines: [
+					{
+						productId: product.id,
+						qtyOrdered: 5,
+						uomCode: "EA",
+						pricePerUom: 15.0,
+					},
+				],
+			};
+			const createdOrder = await caller.order.sales.create(orderInput);
 
-				// Fulfill the order
-				await caller.order.sales.fulfill(createdOrder.order.id);
+			// Fulfill the order
+			await caller.order.sales.fulfill(createdOrder.order.id);
 
-				// Try to update fulfilled order
-				await expect(
-					caller.order.sales.update({
-						id: createdOrder.order.id,
-						notes: "Should fail",
-					}),
-				).rejects.toThrow("Cannot update order in status: fulfilled");
-			},
-		);
+			// Try to update fulfilled order
+			await expect(
+				caller.order.sales.update({
+					id: createdOrder.order.id,
+					notes: "Should fail",
+				}),
+			).rejects.toThrow("Cannot update order in status: fulfilled");
+		});
 	});
 
 	describe("Purchase Order Extended Operations", () => {
-		it.sequential(
-			"should get purchase order by ID - existing order",
-			async () => {
-				const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
+		it.sequential("should get purchase order by ID - existing order", async () => {
+			const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
 
-				// Create supplier
-				const supplierInput: inferProcedureInput<
-					AppRouter["supplier"]["create"]
-				> = {
-					code: `GET_PO_SUPP_${Date.now()}`,
-					name: "Supplier for Get PO Test",
-				};
-				const supplier = (await caller.supplier.create(supplierInput))[0];
+			// Create supplier
+			const supplierInput: inferProcedureInput<
+				AppRouter["supplier"]["create"]
+			> = {
+				code: `GET_PO_SUPP_${Date.now()}`,
+				name: "Supplier for Get PO Test",
+			};
+			const supplier = (await caller.supplier.create(supplierInput))[0];
 
-				// Create product
-				const productInput: inferProcedureInput<
-					AppRouter["product"]["create"]
-				> = {
+			// Create product
+			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
+				{
 					sku: `GET_PO_SKU_${Date.now()}`,
 					name: "Product for Get PO Test",
 					baseUom: "EA",
@@ -368,50 +354,46 @@ describe("Testing Extended Order Management System", () => {
 					trackingLevel: "none",
 					isPhysical: true,
 				};
-				const product = await caller.product.create(productInput);
+			const product = await caller.product.create(productInput);
 
-				// Create purchase order
-				const orderInput: inferProcedureInput<
-					AppRouter["order"]["purchase"]["create"]
-				> = {
-					supplierId: supplier.id,
-					warehouseId: defaultWarehouseId,
-					lines: [
-						{
-							productId: product.id,
-							qtyOrdered: 10,
-							uomCode: "EA",
-							pricePerUom: 5.0,
-						},
-					],
-				};
-				const createdOrder = await caller.order.purchase.create(orderInput);
+			// Create purchase order
+			const orderInput: inferProcedureInput<
+				AppRouter["order"]["purchase"]["create"]
+			> = {
+				supplierId: supplier.id,
+				warehouseId: defaultWarehouseId,
+				lines: [
+					{
+						productId: product.id,
+						qtyOrdered: 10,
+						uomCode: "EA",
+						pricePerUom: 5.0,
+					},
+				],
+			};
+			const createdOrder = await caller.order.purchase.create(orderInput);
 
-				// Get order by ID
-				const retrieved = await caller.order.purchase.getById({
-					id: createdOrder.order.id,
-				});
+			// Get order by ID
+			const retrieved = await caller.order.purchase.getById({
+				id: createdOrder.order.id,
+			});
 
-				expect(retrieved.order.id).toBe(createdOrder.order.id);
-				expect(retrieved.order.code).toMatch(/^PO-\d{4}-/);
-				expect(retrieved.lines).toHaveLength(1);
-				expect(retrieved.lines[0].productId).toBe(product.id);
-				expect(retrieved.lines[0].qtyOrdered).toBe("10");
-			},
-		);
+			expect(retrieved.order.id).toBe(createdOrder.order.id);
+			expect(retrieved.order.code).toMatch(/^PO-\d{4}-/);
+			expect(retrieved.lines).toHaveLength(1);
+			expect(retrieved.lines[0].productId).toBe(product.id);
+			expect(retrieved.lines[0].qtyOrdered).toBe("10");
+		});
 
-		it.sequential(
-			"should get purchase order by ID - non-existing order",
-			async () => {
-				const { caller } = ctx;
+		it.sequential("should get purchase order by ID - non-existing order", async () => {
+			const { caller } = ctx;
 
-				await expect(
-					caller.order.purchase.getById({
-						id: "non-existing-id",
-					}),
-				).rejects.toThrow("Purchase order not found");
-			},
-		);
+			await expect(
+				caller.order.purchase.getById({
+					id: "non-existing-id",
+				}),
+			).rejects.toThrow("Purchase order not found");
+		});
 
 		it.sequential("should list purchase orders with filters", async () => {
 			const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
@@ -528,24 +510,21 @@ describe("Testing Extended Order Management System", () => {
 			expect(paginatedList.orders.length).toBeLessThanOrEqual(2);
 		});
 
-		it.sequential(
-			"should update purchase order - valid update before receipt",
-			async () => {
-				const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
+		it.sequential("should update purchase order - valid update before receipt", async () => {
+			const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
 
-				// Create supplier
-				const supplierInput: inferProcedureInput<
-					AppRouter["supplier"]["create"]
-				> = {
-					code: `UPDATE_PO_SUPP_${Date.now()}`,
-					name: "Supplier for Update PO Test",
-				};
-				const supplier = (await caller.supplier.create(supplierInput))[0];
+			// Create supplier
+			const supplierInput: inferProcedureInput<
+				AppRouter["supplier"]["create"]
+			> = {
+				code: `UPDATE_PO_SUPP_${Date.now()}`,
+				name: "Supplier for Update PO Test",
+			};
+			const supplier = (await caller.supplier.create(supplierInput))[0];
 
-				// Create product
-				const productInput: inferProcedureInput<
-					AppRouter["product"]["create"]
-				> = {
+			// Create product
+			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
+				{
 					sku: `UPDATE_PO_SKU_${Date.now()}`,
 					name: "Product for Update PO Test",
 					baseUom: "EA",
@@ -553,58 +532,54 @@ describe("Testing Extended Order Management System", () => {
 					trackingLevel: "none",
 					isPhysical: true,
 				};
-				const product = await caller.product.create(productInput);
+			const product = await caller.product.create(productInput);
 
-				// Create purchase order
-				const orderInput: inferProcedureInput<
-					AppRouter["order"]["purchase"]["create"]
-				> = {
-					supplierId: supplier.id,
-					warehouseId: defaultWarehouseId,
-					lines: [
-						{
-							productId: product.id,
-							qtyOrdered: 10,
-							uomCode: "EA",
-							pricePerUom: 5.0,
-						},
-					],
-					notes: "Original PO notes",
-					expectedDeliveryDate: new Date("2024-12-25"),
-				};
-				const createdOrder = await caller.order.purchase.create(orderInput);
+			// Create purchase order
+			const orderInput: inferProcedureInput<
+				AppRouter["order"]["purchase"]["create"]
+			> = {
+				supplierId: supplier.id,
+				warehouseId: defaultWarehouseId,
+				lines: [
+					{
+						productId: product.id,
+						qtyOrdered: 10,
+						uomCode: "EA",
+						pricePerUom: 5.0,
+					},
+				],
+				notes: "Original PO notes",
+				expectedDeliveryDate: new Date("2024-12-25"),
+			};
+			const createdOrder = await caller.order.purchase.create(orderInput);
 
-				// Update order (change status, notes, delivery date)
-				const newDeliveryDate = new Date("2024-12-30");
-				const updatedOrder = await caller.order.purchase.update({
-					id: createdOrder.order.id,
-					status: "ordered",
-					notes: "Updated PO notes",
-					expectedDeliveryDate: newDeliveryDate,
-				});
+			// Update order (change status, notes, delivery date)
+			const newDeliveryDate = new Date("2024-12-30");
+			const updatedOrder = await caller.order.purchase.update({
+				id: createdOrder.order.id,
+				status: "ordered",
+				notes: "Updated PO notes",
+				expectedDeliveryDate: newDeliveryDate,
+			});
 
-				expect(updatedOrder.order.status).toBe("open");
-			},
-		);
+			expect(updatedOrder.order.status).toBe("open");
+		});
 
-		it.sequential(
-			"should update purchase order - invalid update after receipt",
-			async () => {
-				const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
+		it.sequential("should update purchase order - invalid update after receipt", async () => {
+			const { caller, defaultCategoryId, defaultWarehouseId } = ctx;
 
-				// Create supplier
-				const supplierInput: inferProcedureInput<
-					AppRouter["supplier"]["create"]
-				> = {
-					code: `UPDATE_FAIL_PO_SUPP_${Date.now()}`,
-					name: "Supplier for Update Fail PO Test",
-				};
-				const supplier = (await caller.supplier.create(supplierInput))[0];
+			// Create supplier
+			const supplierInput: inferProcedureInput<
+				AppRouter["supplier"]["create"]
+			> = {
+				code: `UPDATE_FAIL_PO_SUPP_${Date.now()}`,
+				name: "Supplier for Update Fail PO Test",
+			};
+			const supplier = (await caller.supplier.create(supplierInput))[0];
 
-				// Create product
-				const productInput: inferProcedureInput<
-					AppRouter["product"]["create"]
-				> = {
+			// Create product
+			const productInput: inferProcedureInput<AppRouter["product"]["create"]> =
+				{
 					sku: `UPDATE_FAIL_PO_SKU_${Date.now()}`,
 					name: "Product for Update Fail PO Test",
 					baseUom: "EA",
@@ -612,50 +587,49 @@ describe("Testing Extended Order Management System", () => {
 					trackingLevel: "none",
 					isPhysical: true,
 				};
-				const product = await caller.product.create(productInput);
+			const product = await caller.product.create(productInput);
 
-				// Create purchase order
-				const orderInput: inferProcedureInput<
-					AppRouter["order"]["purchase"]["create"]
-				> = {
-					supplierId: supplier.id,
-					warehouseId: defaultWarehouseId,
-					lines: [
-						{
-							productId: product.id,
-							qtyOrdered: 10,
-							uomCode: "EA",
-							pricePerUom: 5.0,
-						},
-					],
-				};
-				const createdOrder = await caller.order.purchase.create(orderInput);
+			// Create purchase order
+			const orderInput: inferProcedureInput<
+				AppRouter["order"]["purchase"]["create"]
+			> = {
+				supplierId: supplier.id,
+				warehouseId: defaultWarehouseId,
+				lines: [
+					{
+						productId: product.id,
+						qtyOrdered: 10,
+						uomCode: "EA",
+						pricePerUom: 5.0,
+					},
+				],
+			};
+			const createdOrder = await caller.order.purchase.create(orderInput);
 
-				// Receive the purchase order
-				const receiveInput: inferProcedureInput<
-					AppRouter["order"]["purchase"]["receive"]
-				> = {
-					purchaseOrderId: createdOrder.order.id,
-					receiptLines: [
-						{
-							orderLineId: createdOrder.lines[0].id,
-							qtyReceived: 10,
-							uomCode: "EA",
-							costPerUom: 5.0,
-							currency: "USD",
-						},
-					],
-				};
-				await caller.order.purchase.receive(receiveInput);
+			// Receive the purchase order
+			const receiveInput: inferProcedureInput<
+				AppRouter["order"]["purchase"]["receive"]
+			> = {
+				purchaseOrderId: createdOrder.order.id,
+				receiptLines: [
+					{
+						orderLineId: createdOrder.lines[0].id,
+						qtyReceived: 10,
+						uomCode: "EA",
+						costPerUom: 5.0,
+						currency: "USD",
+					},
+				],
+			};
+			await caller.order.purchase.receive(receiveInput);
 
-				// Try to update received order
-				await expect(
-					caller.order.purchase.update({
-						id: createdOrder.order.id,
-						notes: "Should fail",
-					}),
-				).rejects.toThrow("Cannot update order in status: received");
-			},
-		);
+			// Try to update received order
+			await expect(
+				caller.order.purchase.update({
+					id: createdOrder.order.id,
+					notes: "Should fail",
+				}),
+			).rejects.toThrow("Cannot update order in status: received");
+		});
 	});
 });

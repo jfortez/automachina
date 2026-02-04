@@ -16,6 +16,7 @@ export const createHandlingUnit = z.object({
 	warehouseId: z.string().optional(),
 	capacity: z.number().positive().optional(),
 	weightLimit: z.number().positive().optional(),
+	weightLimitUom: z.string().optional(),
 	dimensions: z
 		.object({
 			length: z.number().positive(),

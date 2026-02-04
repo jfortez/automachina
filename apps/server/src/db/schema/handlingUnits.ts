@@ -12,7 +12,7 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { organization } from "./auth";
-import { batches } from "./inventory";
+// import { batches } from "./inventory";
 import { product } from "./products";
 import { uom } from "./uom";
 import { uuidPk } from "./utils";
@@ -50,6 +50,7 @@ export const handlingUnits = pgTable(
 		}),
 		capacity: numeric("capacity", { precision: 18, scale: 6 }),
 		weightLimit: numeric("weight_limit", { precision: 18, scale: 6 }),
+		weightLimitUom: text("weight_limit_uom").references(() => uom.code),
 		dimensions: jsonb("dimensions"),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
@@ -126,6 +127,10 @@ export const handlingUnitsRelations = relations(
 		}),
 		uom: one(uom, {
 			fields: [handlingUnits.uomCode],
+			references: [uom.code],
+		}),
+		weightLimitUomRel: one(uom, {
+			fields: [handlingUnits.weightLimitUom],
 			references: [uom.code],
 		}),
 	}),

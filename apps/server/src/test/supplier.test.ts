@@ -245,28 +245,25 @@ describe("Testing Supplier Management System", () => {
 	});
 
 	describe("Error Handling", () => {
-		it.fails(
-			"should throw error when creating supplier with duplicate code",
-			async () => {
-				const supplierInput: inferProcedureInput<
-					AppRouter["supplier"]["create"]
-				> = {
-					code: "DUPLICATE_CODE", // Same code
-					name: "First Supplier",
-				};
+		it.fails("should throw error when creating supplier with duplicate code", async () => {
+			const supplierInput: inferProcedureInput<
+				AppRouter["supplier"]["create"]
+			> = {
+				code: "DUPLICATE_CODE", // Same code
+				name: "First Supplier",
+			};
 
-				// Create first supplier successfully
-				await ctx.caller.supplier.create(supplierInput);
+			// Create first supplier successfully
+			await ctx.caller.supplier.create(supplierInput);
 
-				// Try to create second supplier with same code - should fail
-				const duplicateInput = {
-					...supplierInput,
-					name: "Second Supplier with Same Code",
-				};
+			// Try to create second supplier with same code - should fail
+			const duplicateInput = {
+				...supplierInput,
+				name: "Second Supplier with Same Code",
+			};
 
-				await ctx.caller.supplier.create(duplicateInput);
-			},
-		);
+			await ctx.caller.supplier.create(duplicateInput);
+		});
 
 		it("should throw error when updating non-existent supplier", async () => {
 			// Use a valid UUID format that doesn't exist in DB

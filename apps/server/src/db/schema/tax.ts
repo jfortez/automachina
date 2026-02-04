@@ -5,7 +5,6 @@ import {
 	numeric,
 	pgTable,
 	text,
-	uuid,
 } from "drizzle-orm/pg-core";
 import { organization } from "./auth";
 import { timestamps, uuidPk } from "./utils";

@@ -94,6 +94,20 @@ export const UOM_ITEMS: (typeof uomSchema.uom.$inferInsert)[] = [
 		category: "mass",
 		isPackaging: false,
 	},
+	{
+		code: "LB",
+		name: "Pound",
+		system: "UCUM",
+		category: "mass",
+		isPackaging: false,
+	},
+	{
+		code: "OZ",
+		name: "Ounce",
+		system: "UCUM",
+		category: "mass",
+		isPackaging: false,
+	},
 
 	// === Volumen ===
 	{
@@ -223,6 +237,9 @@ export const UOM_CONVERSIONS: (typeof uomSchema.uomConversion.$inferInsert)[] =
 		{ fromUom: "MG", toUom: "G", factor: "0.001" }, // 1 mg = 0.001 g
 		{ fromUom: "G", toUom: "KG", factor: "0.001" }, // 1 g = 0.001 kg
 		{ fromUom: "KG", toUom: "TNE", factor: "0.001" }, // 1 kg = 0.001 t
+		{ fromUom: "LB", toUom: "KG", factor: "0.453592" }, // 1 lb = 0.453592 kg
+		{ fromUom: "OZ", toUom: "G", factor: "28.3495" }, // 1 oz = 28.3495 g
+		{ fromUom: "OZ", toUom: "LB", factor: "0.0625" }, // 1 oz = 0.0625 lb
 
 		// === Volumen ===
 		{ fromUom: "ML", toUom: "L", factor: "0.001" }, // 1 ml = 0.001 l

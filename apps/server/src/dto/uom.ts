@@ -1,23 +1,14 @@
 import { z } from "zod";
+import { UOM_CATEGORIES } from "@/db/schema/uom";
 
-// Base UOM schema
 const baseUom = z.object({
 	code: z.string().min(1).max(20),
 	name: z.string().min(1),
 	system: z.enum(["UNECE", "UCUM"]),
-	category: z.enum([
-		"count",
-		"mass",
-		"volume",
-		"length",
-		"area",
-		"time",
-		"other",
-	]),
+	category: z.enum(UOM_CATEGORIES),
 	isPackaging: z.boolean().default(false),
 });
 
-// UOM schemas
 export const createUom = baseUom;
 
 export const createUomWithConversions = baseUom.extend({
@@ -25,7 +16,7 @@ export const createUomWithConversions = baseUom.extend({
 		.array(
 			z.object({
 				toUom: z.string().min(1),
-				factor: z.string(), // Using string for precise decimal handling
+				factor: z.string(),
 			}),
 		)
 		.optional(),
@@ -35,16 +26,14 @@ export const updateUom = createUom.partial().extend({
 	code: z.string().min(1).max(20),
 });
 
-// UOM state management schemas
 export const deactivateUom = z.object({
 	code: z.string().min(1).max(20),
 });
 
-// UOM Conversion schemas
 export const createUomConversion = z.object({
 	fromUom: z.string().min(1),
 	toUom: z.string().min(1),
-	factor: z.string(), // Using string for precise decimal handling
+	factor: z.string(),
 });
 
 export const updateUomConversion = createUomConversion.partial().extend({
@@ -52,7 +41,6 @@ export const updateUomConversion = createUomConversion.partial().extend({
 	toUom: z.string().min(1),
 });
 
-// Options for queries
 export const getUomOptions = z
 	.object({
 		includeInactive: z.boolean().default(false),
