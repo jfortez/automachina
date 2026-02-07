@@ -8,7 +8,8 @@ import {
 	salesOrderLines,
 	salesOrders,
 } from "@/db/schema/orders";
-import { invoiceSequence, organizationSettings } from "@/db/schema/tax";
+import { organizationSettings } from "@/db/schema/organization";
+import { invoiceSequence } from "@/db/schema/tax";
 import type {
 	DeleteInvoiceInput,
 	GenerateInvoiceFromOrderInput,

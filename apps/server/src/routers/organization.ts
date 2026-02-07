@@ -1,5 +1,12 @@
 import z from "zod";
-import { addOrgMember, createOrg, updateOrg } from "@/dto/organization";
+import {
+	addOrgMember,
+	createOrg,
+	createOrganizationSettings,
+	getOrganizationSettings,
+	updateOrg,
+	updateOrganizationSettings,
+} from "@/dto/organization";
 import { organizationService } from "@/services/organization";
 import { protectedProcedure, publicProcedure, router } from "../lib/trpc";
 
@@ -48,4 +55,24 @@ export const orgRouter = router({
 			await organizationService.deleteOrganization(input, user);
 			return { success: true };
 		}),
+
+	settings: router({
+		create: protectedProcedure
+			.input(createOrganizationSettings)
+			.mutation(async ({ input }) => ({
+				settings: await organizationService.createOrganizationSettings(input),
+			})),
+
+		get: protectedProcedure
+			.input(getOrganizationSettings)
+			.query(async ({ input }) => ({
+				settings: await organizationService.getOrganizationSettings(input),
+			})),
+
+		update: protectedProcedure
+			.input(updateOrganizationSettings)
+			.mutation(async ({ input }) => ({
+				settings: await organizationService.updateOrganizationSettings(input),
+			})),
+	}),
 });

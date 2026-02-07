@@ -3,7 +3,10 @@ import type { User } from "better-auth";
 import { and, eq } from "drizzle-orm";
 import type {
 	AddOrgMemberInput,
+	CreateOrganizationSettingsInput,
 	CreateOrgInput,
+	GetOrganizationSettingsInput,
+	UpdateOrganizationSettingsInput,
 	UpdateOrgInput,
 } from "@/dto/organization";
 import { auth } from "@/lib/auth";
@@ -14,6 +17,7 @@ import {
 	member as orgMember,
 	user,
 } from "../db/schema/auth";
+import { organizationSettings } from "../db/schema/organization";
 import { priceList, productCategory } from "../db/schema/products";
 import { locations, warehouses } from "../db/schema/warehouse";
 
@@ -202,6 +206,119 @@ const getActiveOrganization = async (userId: string) => {
 	return organization;
 };
 
+const createOrganizationSettings = async (
+	input: CreateOrganizationSettingsInput,
+) => {
+	const [existing] = await db
+		.select({ id: organizationSettings.id })
+		.from(organizationSettings)
+		.where(eq(organizationSettings.organizationId, input.organizationId))
+		.limit(1);
+
+	if (existing) {
+		throw new TRPCError({
+			code: "CONFLICT",
+			message: "Organization settings already exist",
+		});
+	}
+
+	const [settings] = await db
+		.insert(organizationSettings)
+		.values({
+			...input,
+			defaultTaxPercent: input.defaultTaxPercent.toString(),
+			maxDiscountPercent: input.maxDiscountPercent.toString(),
+			orderApprovalThreshold: input.orderApprovalThreshold?.toString(),
+			maxCashDiscrepancy: input.maxCashDiscrepancy.toString(),
+		})
+		.returning();
+
+	return settings;
+};
+
+const getOrganizationSettings = async (input: GetOrganizationSettingsInput) => {
+	const [settings] = await db
+		.select()
+		.from(organizationSettings)
+		.where(eq(organizationSettings.organizationId, input.organizationId))
+		.limit(1);
+
+	if (!settings) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Organization settings not found",
+		});
+	}
+
+	return settings;
+};
+
+const updateOrganizationSettings = async (
+	input: UpdateOrganizationSettingsInput,
+) => {
+	const { id, ...data } = input;
+
+	const [existing] = await db
+		.select()
+		.from(organizationSettings)
+		.where(eq(organizationSettings.id, id))
+		.limit(1);
+
+	if (!existing) {
+		throw new TRPCError({
+			code: "NOT_FOUND",
+			message: "Organization settings not found",
+		});
+	}
+
+	const updateData: Partial<typeof organizationSettings.$inferInsert> = {};
+
+	if (data.language !== undefined) updateData.language = data.language;
+	if (data.timezone !== undefined) updateData.timezone = data.timezone;
+	if (data.currency !== undefined) updateData.currency = data.currency;
+	if (data.decimalPrecision !== undefined)
+		updateData.decimalPrecision = data.decimalPrecision;
+	if (data.quantityPrecision !== undefined)
+		updateData.quantityPrecision = data.quantityPrecision;
+	if (data.taxRegion !== undefined) updateData.taxRegion = data.taxRegion;
+	if (data.defaultTaxPercent !== undefined)
+		updateData.defaultTaxPercent = data.defaultTaxPercent.toString();
+	if (data.taxIncludedInPrice !== undefined)
+		updateData.taxIncludedInPrice = data.taxIncludedInPrice;
+	if (data.fiscalProvider !== undefined)
+		updateData.fiscalProvider = data.fiscalProvider;
+	if (data.fiscalProviderConfig !== undefined)
+		updateData.fiscalProviderConfig = data.fiscalProviderConfig;
+	if (data.invoiceSequencePrefix !== undefined)
+		updateData.invoiceSequencePrefix = data.invoiceSequencePrefix;
+	if (data.autoGenerateInvoices !== undefined)
+		updateData.autoGenerateInvoices = data.autoGenerateInvoices;
+	if (data.defaultPaymentTerms !== undefined)
+		updateData.defaultPaymentTerms = data.defaultPaymentTerms;
+	if (data.autoApplyDiscounts !== undefined)
+		updateData.autoApplyDiscounts = data.autoApplyDiscounts;
+	if (data.requireApprovalForDiscounts !== undefined)
+		updateData.requireApprovalForDiscounts = data.requireApprovalForDiscounts;
+	if (data.maxDiscountPercent !== undefined)
+		updateData.maxDiscountPercent = data.maxDiscountPercent.toString();
+	if (data.requireApprovalForOrders !== undefined)
+		updateData.requireApprovalForOrders = data.requireApprovalForOrders;
+	if (data.orderApprovalThreshold !== undefined)
+		updateData.orderApprovalThreshold = data.orderApprovalThreshold?.toString();
+	if (data.maxCashDiscrepancy !== undefined)
+		updateData.maxCashDiscrepancy = data.maxCashDiscrepancy.toString();
+	if (data.customFields !== undefined)
+		updateData.customFields = data.customFields;
+
+	const [settings] = await db
+		.update(organizationSettings)
+		.set(updateData)
+		.where(eq(organizationSettings.id, id))
+		.returning();
+
+	return settings;
+};
+
 export const organizationService = {
 	getAllOrganizations,
 	getOrganizationById,
@@ -211,4 +328,7 @@ export const organizationService = {
 	deleteOrganization,
 	getOrganizationsByUser,
 	getActiveOrganization,
+	createOrganizationSettings,
+	getOrganizationSettings,
+	updateOrganizationSettings,
 };

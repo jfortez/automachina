@@ -4,10 +4,10 @@ import * as handlingUnits from "./handlingUnits";
 import * as inventory from "./inventory";
 import * as invoice from "./invoice";
 import * as orders from "./orders";
+import * as organization from "./organization";
 import * as products from "./products";
 import * as suppliers from "./suppliers";
 import * as tax from "./tax";
-
 import * as uom from "./uom";
 import * as warehouse from "./warehouse";
 
@@ -23,6 +23,7 @@ export const schema = {
 	...handlingUnits,
 	...tax,
 	...invoice,
+	...organization,
 };
 
 export type Schema = typeof schema;
