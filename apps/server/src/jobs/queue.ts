@@ -1,4 +1,4 @@
-import { PgBoss, type Job as PgBossJob } from "pg-boss";
+import { PgBoss, type Job as PgBossJob, type Queue } from "pg-boss";
 import { env } from "@/lib/env";
 import { jobLogger } from "./logger";
 
@@ -139,7 +139,7 @@ export class JobQueue {
 		this.logger.info({ name, cron }, "Job scheduled with cron");
 	}
 
-	async createQueue(name: string, options?: object): Promise<void> {
+	async createQueue(name: string, options?: Omit<Queue, 'name'>): Promise<void> {
 		if (!this.boss || !this.isStarted) {
 			this.logger.debug(
 				{ name },

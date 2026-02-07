@@ -4,14 +4,16 @@ import { trpcServer } from "@hono/trpc-server";
 import { convertToModelMessages, streamText } from "ai";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
+import { logger as honoLogger } from "hono/logger";
+import { initializeJobs, shutdownJobs } from "./jobs";
 import { auth } from "./lib/auth";
 import { createContext } from "./lib/context";
+import { logger } from "./lib/logger";
 import { appRouter } from "./routers/index";
 
 const app = new Hono();
 
-app.use(logger());
+app.use(honoLogger());
 app.use(
 	"/*",
 	cors({
@@ -51,12 +53,39 @@ app.get("/", (c) => {
 
 import { serve } from "@hono/node-server";
 
-serve(
-	{
-		fetch: app.fetch,
-		port: 3000,
-	},
-	(info) => {
-		console.log(`Server is running on http://localhost:${info.port}`);
-	},
-);
+(async () => {
+	try {
+		await initializeJobs();
+
+		const server = serve(
+			{
+				fetch: app.fetch,
+				port: 3000,
+			},
+			(info) => {
+				logger.info(`Server is running on http://localhost:${info.port}`);
+			},
+		);
+
+		const gracefulShutdown = async (signal: string) => {
+			logger.info({ signal }, "Received shutdown signal");
+
+			server.close(async (err) => {
+				if (err) {
+					logger.error({ err }, "Error during server shutdown");
+					process.exit(1);
+				}
+
+				await shutdownJobs();
+				logger.info("Shutdown complete");
+				process.exit(0);
+			});
+		};
+
+		process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+		process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+	} catch (error) {
+		logger.error({ error }, "Failed to start server");
+		process.exit(1);
+	}
+})();
