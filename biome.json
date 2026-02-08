@@ -50,7 +50,7 @@
 			},
 			"suspicious": {
 				"noUnknownAtRules": "off",
-				"noExplicitAny": "off"
+				"noExplicitAny": "warn"
 			},
 			"a11y": {
 				"noSvgWithoutTitle": "off",
