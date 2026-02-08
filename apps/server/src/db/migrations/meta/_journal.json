@@ -8,6 +8,20 @@
 			"when": 1770568186133,
 			"tag": "0000_far_toad",
 			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1770571237114,
+			"tag": "0001_mighty_betty_brant",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1770571676017,
+			"tag": "0002_windy_black_bird",
+			"breakpoints": true
 		}
 	]
 }

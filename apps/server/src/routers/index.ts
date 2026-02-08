@@ -4,6 +4,7 @@ import {
 	publicProcedure,
 	router,
 } from "../lib/trpc";
+import { accountsReceivableRouter } from "./accountsReceivable";
 import { commercialDocumentRouter } from "./commercialDocument";
 import { customerRouter } from "./customer";
 import { fileRouter } from "./files";
@@ -39,6 +40,7 @@ export const appRouter = router({
 	invoice: invoiceRouter,
 	files: fileRouter,
 	commercialDocument: commercialDocumentRouter,
+	accountsReceivable: accountsReceivableRouter,
 });
 
 export const createCaller = createCallerFactory(appRouter);
