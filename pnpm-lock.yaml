@@ -30,8 +30,8 @@ importers:
         specifier: 11.8.0
         version: 11.8.0(fumadocs-core@15.7.1(@types/react@19.2.10)(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       fumadocs-ui:
-        specifier: 15.7.1
-        version: 15.7.1(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.1.18)
+        specifier: 16.5.0
+        version: 16.5.0(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(fumadocs-core@15.7.1(@types/react@19.2.10)(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.1.18)
       next:
         specifier: 16.1.5
         version: 16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -74,7 +74,7 @@ importers:
         version: 2.0.127(react@19.0.0)(zod@4.3.6)
       '@better-auth/expo':
         specifier: ^1.3.7
-        version: 1.4.18(dd7a43f268bde903966c1265f99edf34)
+        version: 1.4.18(d2eef58edd2a8d6357695c558c29081e)
       '@expo/vector-icons':
         specifier: ^14.1.0
         version: 14.1.0(expo-font@13.3.2(expo@53.0.26(@babel/core@7.29.0)(@expo/metro-runtime@5.0.4(react-native@0.79.1(@babel/core@7.29.0)(@types/react@19.0.14)(react@19.0.0)))(react-native@0.79.1(@babel/core@7.29.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0))(react@19.0.0))(react-native@0.79.1(@babel/core@7.29.0)(@types/react@19.0.14)(react@19.0.0))(react@19.0.0)
@@ -192,7 +192,7 @@ importers:
         version: 3.982.0
       '@better-auth/expo':
         specifier: ^1.3.7
-        version: 1.4.18(5666ec9fee974cbcbe530b0339e6c045)
+        version: 1.4.18(346631c6e8ae1caa8b6a4cea48ca2b74)
       '@hono/node-server':
         specifier: ^1.19.0
         version: 1.19.9(hono@4.11.7)
@@ -2402,6 +2402,23 @@ packages:
 
   '@formatjs/intl-localematcher@0.6.2':
     resolution: {integrity: sha512-XOMO2Hupl0wdd172Y06h6kLpBz6Dv+J4okPLl4LPtzbr8f66WbIoy4ev98EBuZ6ZK4h5ydTN6XneT4QVpD7cdA==}
+
+  '@fumadocs/ui@16.5.0':
+    resolution: {integrity: sha512-64P3QqnN5SjjqsKLIoA/6Tgzrs05JthZSa4RxuTCmXMXkjKOV6m6x6hanQrDzX1M27xVIlwuDrxLBzA21t0CgQ==}
+    peerDependencies:
+      '@types/react': '*'
+      fumadocs-core: 16.5.0
+      next: 16.x.x
+      react: ^19.2.0
+      react-dom: ^19.2.0
+      tailwindcss: ^4.0.0
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      next:
+        optional: true
+      tailwindcss:
+        optional: true
 
   '@hono/node-server@1.19.9':
     resolution: {integrity: sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw==}
@@ -6334,14 +6351,15 @@ packages:
       vite:
         optional: true
 
-  fumadocs-ui@15.7.1:
-    resolution: {integrity: sha512-l+APDg4iyoQU/TVhATTRwBA0WuceHhEFiSpBLf6JaxL+FAQL6PiOaJGsp5lIqQUNpQyl1eC6uDwWDbkb1i59ow==}
+  fumadocs-ui@16.5.0:
+    resolution: {integrity: sha512-eKpU3A7HpvGxbXd5ipZcouW/NEqVFWyHIagbbl82c49vqBKSiAJFi51XrpTqmS079PxTXZUpQoTe8zONUWHB/w==}
     peerDependencies:
       '@types/react': '*'
-      next: 14.x.x || 15.x.x
-      react: 18.x.x || 19.x.x
-      react-dom: 18.x.x || 19.x.x
-      tailwindcss: ^3.4.14 || ^4.0.0
+      fumadocs-core: 16.5.0
+      next: 16.x.x
+      react: ^19.2.0
+      react-dom: ^19.2.0
+      tailwindcss: ^4.0.0
     peerDependenciesMeta:
       '@types/react':
         optional: true
@@ -7180,6 +7198,11 @@ packages:
 
   lucide-react@0.473.0:
     resolution: {integrity: sha512-KW6u5AKeIjkvrxXZ6WuCu9zHE/gEYSXCay+Gre2ZoInD0Je/e3RBtP4OHpJVJ40nDklSvjVKjgH7VU8/e2dzRw==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  lucide-react@0.563.0:
+    resolution: {integrity: sha512-8dXPB2GI4dI8jV4MgUDGBeLdGk8ekfqVZ0BdLcrRzocGgG75ltNEmWS+gE7uokKF/0oSUuczNDT+g9hFJ23FkA==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -11212,9 +11235,9 @@ snapshots:
       nanostores: 1.1.0
       zod: 4.3.6
 
-  '@better-auth/expo@1.4.18(5666ec9fee974cbcbe530b0339e6c045)':
+  '@better-auth/expo@1.4.18(346631c6e8ae1caa8b6a4cea48ca2b74)':
     dependencies:
-      '@better-auth/core': 1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0)
+      '@better-auth/core': 1.4.18(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0)
       '@better-fetch/fetch': 1.1.21
       better-auth: 1.4.18(drizzle-kit@0.31.8)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(kysely@0.28.11)(pg@8.18.0))(next@16.1.5(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(pg@8.18.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@22.19.8)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@2.0.1))(lightningcss@1.30.2)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       better-call: 1.1.8(zod@4.3.6)
@@ -11224,9 +11247,9 @@ snapshots:
       expo-linking: 7.1.7(expo@53.0.26(@babel/core@7.29.0)(@expo/metro-runtime@5.0.4(react-native@0.79.1(@babel/core@7.29.0)(@types/react@19.2.10)(react@19.2.4)))(react-native@0.79.1(@babel/core@7.29.0)(@types/react@19.2.10)(react@19.2.4))(react@19.2.4))(react-native@0.79.1(@babel/core@7.29.0)(@types/react@19.2.10)(react@19.2.4))(react@19.2.4)
       expo-web-browser: 15.0.10(expo@53.0.26(@babel/core@7.29.0)(@expo/metro-runtime@5.0.4(react-native@0.79.1(@babel/core@7.29.0)(@types/react@19.2.10)(react@19.2.4)))(react-native@0.79.1(@babel/core@7.29.0)(@types/react@19.2.10)(react@19.2.4))(react@19.2.4))(react-native@0.79.1(@babel/core@7.29.0)(@types/react@19.2.10)(react@19.2.4))
 
-  '@better-auth/expo@1.4.18(dd7a43f268bde903966c1265f99edf34)':
+  '@better-auth/expo@1.4.18(d2eef58edd2a8d6357695c558c29081e)':
     dependencies:
-      '@better-auth/core': 1.4.18(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0)
+      '@better-auth/core': 1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0)
       '@better-fetch/fetch': 1.1.21
       better-auth: 1.4.18(drizzle-kit@0.31.8)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(kysely@0.28.11)(pg@8.18.0))(next@16.1.5(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(pg@8.18.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@24.3.0)(jiti@1.21.7)(jsdom@27.4.0(@noble/hashes@2.0.1))(lightningcss@1.30.2)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       better-call: 1.1.8(zod@4.3.6)
@@ -12036,6 +12059,19 @@ snapshots:
   '@formatjs/intl-localematcher@0.6.2':
     dependencies:
       tslib: 2.8.1
+
+  '@fumadocs/ui@16.5.0(@types/react@19.2.10)(fumadocs-core@15.7.1(@types/react@19.2.10)(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.1.18)':
+    dependencies:
+      fumadocs-core: 15.7.1(@types/react@19.2.10)(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      next-themes: 0.4.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      postcss-selector-parser: 7.1.1
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+      tailwind-merge: 3.4.0
+    optionalDependencies:
+      '@types/react': 19.2.10
+      next: 16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      tailwindcss: 4.1.18
 
   '@hono/node-server@1.19.9(hono@4.11.7)':
     dependencies:
@@ -15015,7 +15051,7 @@ snapshots:
   better-auth@1.4.18(drizzle-kit@0.31.8)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(kysely@0.28.11)(pg@8.18.0))(next@16.1.5(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(pg@8.18.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@24.3.0)(jiti@1.21.7)(jsdom@27.4.0(@noble/hashes@2.0.1))(lightningcss@1.30.2)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)):
     dependencies:
       '@better-auth/core': 1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0)
-      '@better-auth/telemetry': 1.4.18(@better-auth/core@1.4.18(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))
+      '@better-auth/telemetry': 1.4.18(@better-auth/core@1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.1.1
@@ -15038,7 +15074,7 @@ snapshots:
   better-auth@1.4.18(drizzle-kit@0.31.8)(drizzle-orm@0.44.7(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(kysely@0.28.11)(pg@8.18.0))(next@16.1.5(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(pg@8.18.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@22.19.8)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@2.0.1))(lightningcss@1.30.2)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)):
     dependencies:
       '@better-auth/core': 1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0)
-      '@better-auth/telemetry': 1.4.18(@better-auth/core@1.4.18(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))
+      '@better-auth/telemetry': 1.4.18(@better-auth/core@1.4.18(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.0))
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.1.1
@@ -16414,8 +16450,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  fumadocs-ui@15.7.1(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.1.18):
+  fumadocs-ui@16.5.0(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(fumadocs-core@15.7.1(@types/react@19.2.10)(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.1.18):
     dependencies:
+      '@fumadocs/ui': 16.5.0(@types/react@19.2.10)(fumadocs-core@15.7.1(@types/react@19.2.10)(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.1.18)
       '@radix-ui/react-accordion': 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@radix-ui/react-collapsible': 1.1.12(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@radix-ui/react-dialog': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -16428,25 +16465,18 @@ snapshots:
       '@radix-ui/react-tabs': 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       class-variance-authority: 0.7.1
       fumadocs-core: 15.7.1(@types/react@19.2.10)(next@16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      lodash.merge: 4.6.2
+      lucide-react: 0.563.0(react@19.2.4)
       next-themes: 0.4.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      postcss-selector-parser: 7.1.1
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
       react-medium-image-zoom: 5.4.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       scroll-into-view-if-needed: 3.1.0
-      tailwind-merge: 3.4.0
     optionalDependencies:
       '@types/react': 19.2.10
       next: 16.1.5(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       tailwindcss: 4.1.18
     transitivePeerDependencies:
-      - '@mixedbread/sdk'
-      - '@oramacloud/client'
       - '@types/react-dom'
-      - algoliasearch
-      - react-router
-      - supports-color
 
   function-bind@1.1.2: {}
 
@@ -17299,6 +17329,10 @@ snapshots:
       yallist: 3.1.1
 
   lucide-react@0.473.0(react@19.2.4):
+    dependencies:
+      react: 19.2.4
+
+  lucide-react@0.563.0(react@19.2.4):
     dependencies:
       react: 19.2.4
 
