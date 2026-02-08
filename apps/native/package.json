@@ -35,20 +35,20 @@
 		"expo-system-ui": "~5.0.10",
 		"expo-web-browser": "~15.0.10",
 		"nativewind": "^4.1.23",
-		"react": "19.0.0",
-		"react-dom": "19.0.0",
-		"react-native": "0.79.1",
-		"react-native-gesture-handler": "~2.24.0",
+		"react": "19.2.4",
+		"react-dom": "19.2.4",
+		"react-native": "0.83.1",
+		"react-native-gesture-handler": "~2.30.0",
 		"react-native-reanimated": "~3.17.5",
-		"react-native-safe-area-context": "5.3.0",
-		"react-native-screens": "~4.10.0",
-		"react-native-web": "^0.20.0"
+		"react-native-safe-area-context": "5.6.2",
+		"react-native-screens": "~4.22.0",
+		"react-native-web": "^0.21.2"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.28.3",
-		"@types/react": "~19.0.14",
+		"@types/react": "~19.2.11",
 		"tailwindcss": "^3.4.17",
-		"typescript": "~5.8.3"
+		"typescript": "~5.9.3"
 	},
 	"private": true
 }
