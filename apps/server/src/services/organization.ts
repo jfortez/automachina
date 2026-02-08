@@ -109,6 +109,12 @@ const createOrganization = async (data: CreateOrgInput, user: User) => {
 			description: "Default general category",
 		});
 
+		// Create default organization settings
+		await db.insert(organizationSettings).values({
+			organizationId: orgId,
+			// All other fields use schema defaults
+		});
+
 		return newOrg!;
 	} catch (error) {
 		console.log(error);
