@@ -277,30 +277,27 @@ const updateOrganizationSettings = async (
 		});
 	}
 
-	// Define numeric fields that need string conversion for PostgreSQL
-	const numericFields = [
+	// Define fields that need string conversion for PostgreSQL numeric columns
+	const numericFields = new Set([
 		"defaultTaxPercent",
 		"maxDiscountPercent",
 		"orderApprovalThreshold",
 		"maxCashDiscrepancy",
-	] as const;
-	type NumericField = (typeof numericFields)[number];
+	]);
 
 	// Build update data using declarative mapping
-	const updateData = Object.entries(data)
-		.filter(([, value]) => value !== undefined)
-		.reduce((acc, [key, value]) => {
-			const typedKey = key as keyof typeof data;
+	const updateData: Partial<typeof organizationSettings.$inferInsert> = {};
 
-			// Handle numeric fields that need string conversion for PostgreSQL
-			if (numericFields.includes(typedKey as NumericField)) {
-				acc[typedKey] = value?.toString();
-			} else {
-				acc[typedKey] = value;
-			}
+	for (const [key, value] of Object.entries(data)) {
+		if (value === undefined || key === "id") continue;
 
-			return acc;
-		}, {} as Partial<typeof organizationSettings.$inferInsert>);
+		// Handle numeric fields that need string conversion for PostgreSQL
+		if (numericFields.has(key)) {
+			(updateData as Record<string, unknown>)[key] = value?.toString();
+		} else {
+			(updateData as Record<string, unknown>)[key] = value;
+		}
+	}
 
 	const [settings] = await db
 		.update(organizationSettings)
