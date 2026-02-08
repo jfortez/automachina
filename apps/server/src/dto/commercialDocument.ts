@@ -1,8 +1,6 @@
 import { z } from "zod";
 import {
 	COMMERCIAL_DOCUMENT_TYPES,
-	commercialDocumentsDiscountBreakdownSchema,
-	commercialDocumentsTaxBreakdownSchema,
 	commercialDocumentsTransportInfoSchema,
 	DOCUMENT_STATUSES,
 	REASON_CODES,

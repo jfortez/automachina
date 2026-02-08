@@ -45,10 +45,10 @@ describe("Commercial Documents Management", () => {
 		};
 
 		const customerInput: inferProcedureInput<AppRouter["customer"]["create"]> =
-		{
-			code: `test-cust-${nanoid(8)}`,
-			name: "Test Customer",
-		};
+			{
+				code: `test-cust-${nanoid(8)}`,
+				name: "Test Customer",
+			};
 
 		const [createdCustomer] = await ctx.caller.customer.create(customerInput);
 		defaultCustomer = {
@@ -61,8 +61,10 @@ describe("Commercial Documents Management", () => {
 	it.sequential("should create an invoice", async () => {
 		const { caller } = ctx;
 
-		const input = {
-			documentType: "invoice" as const,
+		const input: inferProcedureInput<
+			AppRouter["commercialDocument"]["create"]
+		> = {
+			documentType: "invoice",
 			issueDate: new Date().toISOString().split("T")[0],
 			customerId: defaultCustomer.id,
 			lines: [
@@ -89,8 +91,10 @@ describe("Commercial Documents Management", () => {
 	it.sequential("should create a sales note", async () => {
 		const { caller } = ctx;
 
-		const input = {
-			documentType: "sales_note" as const,
+		const input: inferProcedureInput<
+			AppRouter["commercialDocument"]["create"]
+		> = {
+			documentType: "sales_note",
 			issueDate: new Date().toISOString().split("T")[0],
 			lines: [
 				{
@@ -111,8 +115,10 @@ describe("Commercial Documents Management", () => {
 	it.sequential("should create a delivery guide with transport info", async () => {
 		const { caller } = ctx;
 
-		const input = {
-			documentType: "delivery_guide" as const,
+		const input: inferProcedureInput<
+			AppRouter["commercialDocument"]["create"]
+		> = {
+			documentType: "delivery_guide",
 			issueDate: new Date().toISOString().split("T")[0],
 			customerId: defaultCustomer.id,
 			lines: [
@@ -125,7 +131,7 @@ describe("Commercial Documents Management", () => {
 				},
 			],
 			transportInfo: {
-				transportMode: "vehicle" as const,
+				transportMode: "vehicle",
 				vehiclePlate: "ABC-123",
 				driverName: "Juan Perez",
 				originAddress: "Bodega Principal",
@@ -144,7 +150,7 @@ describe("Commercial Documents Management", () => {
 		const { caller } = ctx;
 
 		const invoice = await caller.commercialDocument.create({
-			documentType: "invoice" as const,
+			documentType: "invoice",
 			issueDate: new Date().toISOString().split("T")[0],
 			customerId: defaultCustomer.id,
 			lines: [
@@ -160,11 +166,11 @@ describe("Commercial Documents Management", () => {
 		});
 
 		const creditNote = await caller.commercialDocument.create({
-			documentType: "credit_note" as const,
+			documentType: "credit_note",
 			issueDate: new Date().toISOString().split("T")[0],
 			customerId: defaultCustomer.id,
 			referenceDocumentId: invoice.result.document.id,
-			reasonCode: "return" as const,
+			reasonCode: "return",
 			reasonDescription: "Producto defectuoso",
 			lines: [
 				{
@@ -189,12 +195,12 @@ describe("Commercial Documents Management", () => {
 		const { caller } = ctx;
 
 		const result1 = await caller.commercialDocument.generateNumber({
-			documentType: "invoice" as const,
+			documentType: "invoice",
 			series: "001",
 		});
 
 		const result2 = await caller.commercialDocument.generateNumber({
-			documentType: "invoice" as const,
+			documentType: "invoice",
 			series: "001",
 		});
 
@@ -217,7 +223,7 @@ describe("Commercial Documents Management", () => {
 		const { caller } = ctx;
 
 		const created = await caller.commercialDocument.create({
-			documentType: "invoice" as const,
+			documentType: "invoice",
 			issueDate: new Date().toISOString().split("T")[0],
 			customerId: defaultCustomer.id,
 			lines: [
@@ -243,7 +249,7 @@ describe("Commercial Documents Management", () => {
 		const { caller } = ctx;
 
 		const created = await caller.commercialDocument.create({
-			documentType: "invoice" as const,
+			documentType: "invoice",
 			issueDate: new Date().toISOString().split("T")[0],
 			customerId: defaultCustomer.id,
 			lines: [
