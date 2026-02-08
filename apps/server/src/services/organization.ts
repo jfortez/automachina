@@ -271,44 +271,30 @@ const updateOrganizationSettings = async (
 		});
 	}
 
-	const updateData: Partial<typeof organizationSettings.$inferInsert> = {};
+	// Define numeric fields that need string conversion for PostgreSQL
+	const numericFields = [
+		"defaultTaxPercent",
+		"maxDiscountPercent",
+		"orderApprovalThreshold",
+		"maxCashDiscrepancy",
+	] as const;
+	type NumericField = (typeof numericFields)[number];
 
-	if (data.language !== undefined) updateData.language = data.language;
-	if (data.timezone !== undefined) updateData.timezone = data.timezone;
-	if (data.currency !== undefined) updateData.currency = data.currency;
-	if (data.decimalPrecision !== undefined)
-		updateData.decimalPrecision = data.decimalPrecision;
-	if (data.quantityPrecision !== undefined)
-		updateData.quantityPrecision = data.quantityPrecision;
-	if (data.taxRegion !== undefined) updateData.taxRegion = data.taxRegion;
-	if (data.defaultTaxPercent !== undefined)
-		updateData.defaultTaxPercent = data.defaultTaxPercent.toString();
-	if (data.taxIncludedInPrice !== undefined)
-		updateData.taxIncludedInPrice = data.taxIncludedInPrice;
-	if (data.fiscalProvider !== undefined)
-		updateData.fiscalProvider = data.fiscalProvider;
-	if (data.fiscalProviderConfig !== undefined)
-		updateData.fiscalProviderConfig = data.fiscalProviderConfig;
-	if (data.invoiceSequencePrefix !== undefined)
-		updateData.invoiceSequencePrefix = data.invoiceSequencePrefix;
-	if (data.autoGenerateInvoices !== undefined)
-		updateData.autoGenerateInvoices = data.autoGenerateInvoices;
-	if (data.defaultPaymentTerms !== undefined)
-		updateData.defaultPaymentTerms = data.defaultPaymentTerms;
-	if (data.autoApplyDiscounts !== undefined)
-		updateData.autoApplyDiscounts = data.autoApplyDiscounts;
-	if (data.requireApprovalForDiscounts !== undefined)
-		updateData.requireApprovalForDiscounts = data.requireApprovalForDiscounts;
-	if (data.maxDiscountPercent !== undefined)
-		updateData.maxDiscountPercent = data.maxDiscountPercent.toString();
-	if (data.requireApprovalForOrders !== undefined)
-		updateData.requireApprovalForOrders = data.requireApprovalForOrders;
-	if (data.orderApprovalThreshold !== undefined)
-		updateData.orderApprovalThreshold = data.orderApprovalThreshold?.toString();
-	if (data.maxCashDiscrepancy !== undefined)
-		updateData.maxCashDiscrepancy = data.maxCashDiscrepancy.toString();
-	if (data.customFields !== undefined)
-		updateData.customFields = data.customFields;
+	// Build update data using declarative mapping
+	const updateData = Object.entries(data)
+		.filter(([, value]) => value !== undefined)
+		.reduce((acc, [key, value]) => {
+			const typedKey = key as keyof typeof data;
+
+			// Handle numeric fields that need string conversion for PostgreSQL
+			if (numericFields.includes(typedKey as NumericField)) {
+				acc[typedKey] = value?.toString();
+			} else {
+				acc[typedKey] = value;
+			}
+
+			return acc;
+		}, {} as Partial<typeof organizationSettings.$inferInsert>);
 
 	const [settings] = await db
 		.update(organizationSettings)
