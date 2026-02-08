@@ -67,12 +67,52 @@ export type OrganizationCustomFields = z.infer<
 	typeof organizationCustomFieldsSchema
 >;
 
+export const organizationAddressSchema = z.object({
+	street: z.string().min(1),
+	city: z.string().min(1),
+	state: z.string().min(1),
+	postalCode: z.string().min(1),
+	country: z.string().min(1).default("EC"),
+});
+
+export type OrganizationAddress = z.infer<typeof organizationAddressSchema>;
+
+export const LEGAL_ENTITY_TYPES = [
+	"individual",
+	"company",
+	"nonprofit",
+	"government",
+] as const;
+
 export const organizationSettings = pgTable("organization_settings", {
 	id: uuidPk("id"),
 	organizationId: text("organization_id")
 		.references(() => organization.id, { onDelete: "cascade" })
 		.notNull()
 		.unique(),
+
+	// Institutional Data
+	businessName: text("business_name"),
+	taxId: text("tax_id"),
+	legalEntityType: text("legal_entity_type", {
+		enum: LEGAL_ENTITY_TYPES,
+	}),
+	isRequiredToKeepBooks: boolean("is_required_to_keep_books").default(false),
+
+	// Addresses
+	mainAddress: jsonb("main_address").$type<OrganizationAddress>(),
+	branchAddress: jsonb("branch_address").$type<OrganizationAddress>(),
+
+	// Branding
+	logoUrl: text("logo_url"),
+	faviconUrl: text("favicon_url"),
+	siteTitle: text("site_title"),
+	siteSubtitle: text("site_subtitle"),
+
+	// Contact
+	website: text("website"),
+	contactEmail: text("contact_email"),
+
 	language: text("language", { enum: SUPPORTED_LANGUAGES })
 		.default("es")
 		.notNull(),
