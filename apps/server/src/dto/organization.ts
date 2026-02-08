@@ -1,6 +1,8 @@
 import z from "zod";
 import {
 	FISCAL_PROVIDERS,
+	LEGAL_ENTITY_TYPES,
+	organizationAddressSchema,
 	organizationCustomFieldsSchema,
 	organizationFiscalConfigSchema,
 	PAYMENT_TERMS,
@@ -46,6 +48,26 @@ export const createOrganizationSettings = z.object({
 	orderApprovalThreshold: z.number().optional(),
 	maxCashDiscrepancy: z.number().default(10),
 	customFields: organizationCustomFieldsSchema.optional(),
+
+	// Institutional Data
+	businessName: z.string().optional(),
+	taxId: z.string().optional(),
+	legalEntityType: z.enum(LEGAL_ENTITY_TYPES).optional(),
+	isRequiredToKeepBooks: z.boolean().default(false),
+
+	// Addresses
+	mainAddress: organizationAddressSchema.optional(),
+	branchAddress: organizationAddressSchema.optional(),
+
+	// Branding
+	logoUrl: z.string().url().optional(),
+	faviconUrl: z.string().url().optional(),
+	siteTitle: z.string().optional(),
+	siteSubtitle: z.string().optional(),
+
+	// Contact
+	website: z.string().url().optional(),
+	contactEmail: z.string().email().optional(),
 });
 
 export const updateOrganizationSettings = createOrganizationSettings.partial().extend({
