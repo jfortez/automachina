@@ -1,15 +1,65 @@
+import type { inferProcedureInput } from "@trpc/server";
+import { nanoid } from "nanoid";
 import { beforeAll, describe, expect, it } from "vitest";
+import type { AppRouter } from "@/routers";
 import { setupTestContext } from "./util";
 
 describe("Commercial Documents Management", () => {
 	let ctx: Awaited<ReturnType<typeof setupTestContext>>;
+	let defaultCustomer: { id: string; name: string; code: string };
+	let testProduct: { id: string; name: string; baseUom: string };
 
 	beforeAll(async () => {
 		ctx = await setupTestContext();
+
+		const testUom = await ctx.caller.uom.getByCode("EA");
+		if (!testUom) {
+			throw new Error("No UOM found in database");
+		}
+
+		const categoryInput: inferProcedureInput<
+			AppRouter["product"]["category"]["create"]
+		> = {
+			code: `test-cat-${nanoid(6)}`,
+			name: "Test Category",
+		};
+
+		const [category] = await ctx.caller.product.category.create(categoryInput);
+
+		const productInput: inferProcedureInput<AppRouter["product"]["create"]> = {
+			sku: `test-prod-${nanoid(8)}`,
+			name: "Test Product",
+			description: "Product for testing commercial documents",
+			baseUom: testUom.code,
+			categoryId: category.id,
+			trackingLevel: "none",
+			isPhysical: true,
+			prices: [{ uomCode: testUom.code, price: 1.0 }],
+		};
+
+		const createdProduct = await ctx.caller.product.create(productInput);
+		testProduct = {
+			id: createdProduct.id,
+			name: createdProduct.name,
+			baseUom: createdProduct.baseUom,
+		};
+
+		const customerInput: inferProcedureInput<AppRouter["customer"]["create"]> =
+		{
+			code: `test-cust-${nanoid(8)}`,
+			name: "Test Customer",
+		};
+
+		const [createdCustomer] = await ctx.caller.customer.create(customerInput);
+		defaultCustomer = {
+			id: createdCustomer.id,
+			name: createdCustomer.name,
+			code: createdCustomer.code,
+		};
 	});
 
 	it.sequential("should create an invoice", async () => {
-		const { caller, defaultCustomer, testProduct } = ctx;
+		const { caller } = ctx;
 
 		const input = {
 			documentType: "invoice" as const,
@@ -33,11 +83,11 @@ describe("Commercial Documents Management", () => {
 		expect(result.result.document.documentType).toBe("invoice");
 		expect(result.result.document.documentNumber).toMatch(/^FAC-/);
 		expect(result.result.lines).toHaveLength(1);
-		expect(Number(result.result.document.total)).toBe(115); // 100 + 15% tax
+		expect(Number(result.result.document.total)).toBe(115);
 	});
 
 	it.sequential("should create a sales note", async () => {
-		const { caller, testProduct } = ctx;
+		const { caller } = ctx;
 
 		const input = {
 			documentType: "sales_note" as const,
@@ -59,7 +109,7 @@ describe("Commercial Documents Management", () => {
 	});
 
 	it.sequential("should create a delivery guide with transport info", async () => {
-		const { caller, defaultCustomer, testProduct } = ctx;
+		const { caller } = ctx;
 
 		const input = {
 			documentType: "delivery_guide" as const,
@@ -91,9 +141,8 @@ describe("Commercial Documents Management", () => {
 	});
 
 	it.sequential("should create a credit note referencing an invoice", async () => {
-		const { caller, defaultCustomer, testProduct } = ctx;
+		const { caller } = ctx;
 
-		// First create an invoice
 		const invoice = await caller.commercialDocument.create({
 			documentType: "invoice" as const,
 			issueDate: new Date().toISOString().split("T")[0],
@@ -110,7 +159,6 @@ describe("Commercial Documents Management", () => {
 			],
 		});
 
-		// Create credit note referencing the invoice
 		const creditNote = await caller.commercialDocument.create({
 			documentType: "credit_note" as const,
 			issueDate: new Date().toISOString().split("T")[0],
@@ -154,7 +202,7 @@ describe("Commercial Documents Management", () => {
 	});
 
 	it.sequential("should list documents with filters", async () => {
-		const { caller, defaultCustomer } = ctx;
+		const { caller } = ctx;
 
 		const result = await caller.commercialDocument.list({
 			documentType: "invoice",
@@ -166,7 +214,7 @@ describe("Commercial Documents Management", () => {
 	});
 
 	it.sequential("should get document by ID with lines", async () => {
-		const { caller, defaultCustomer, testProduct } = ctx;
+		const { caller } = ctx;
 
 		const created = await caller.commercialDocument.create({
 			documentType: "invoice" as const,
@@ -192,7 +240,7 @@ describe("Commercial Documents Management", () => {
 	});
 
 	it.sequential("should update document status", async () => {
-		const { caller, defaultCustomer, testProduct } = ctx;
+		const { caller } = ctx;
 
 		const created = await caller.commercialDocument.create({
 			documentType: "invoice" as const,
