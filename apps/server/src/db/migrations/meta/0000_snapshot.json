@@ -1,5 +1,5 @@
 {
-	"id": "971ac8ab-8952-4a7a-8898-f24cdc7e6c60",
+	"id": "5314e192-3c84-458c-88c9-2cfa4badfdf7",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -542,6 +542,557 @@
 			"foreignKeys": {},
 			"compositePrimaryKeys": {},
 			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.commercial_document_line": {
+			"name": "commercial_document_line",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"document_id": {
+					"name": "document_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"product_id": {
+					"name": "product_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"description": {
+					"name": "description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"quantity": {
+					"name": "quantity",
+					"type": "numeric(28, 9)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"uom_code": {
+					"name": "uom_code",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"unit_price": {
+					"name": "unit_price",
+					"type": "numeric(18, 6)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"discount_percent": {
+					"name": "discount_percent",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'0'"
+				},
+				"discount_amount": {
+					"name": "discount_amount",
+					"type": "numeric(18, 6)",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'0'"
+				},
+				"tax_percent": {
+					"name": "tax_percent",
+					"type": "numeric(6, 2)",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'0'"
+				},
+				"tax_amount": {
+					"name": "tax_amount",
+					"type": "numeric(18, 6)",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'0'"
+				},
+				"line_total": {
+					"name": "line_total",
+					"type": "numeric(18, 6)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"reference_line_id": {
+					"name": "reference_line_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"line_number": {
+					"name": "line_number",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"commercial_document_line_document_id_index": {
+					"name": "commercial_document_line_document_id_index",
+					"columns": [
+						{
+							"expression": "document_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"commercial_document_line_document_id_commercial_document_id_fk": {
+					"name": "commercial_document_line_document_id_commercial_document_id_fk",
+					"tableFrom": "commercial_document_line",
+					"tableTo": "commercial_document",
+					"columnsFrom": ["document_id"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"commercial_document_line_product_id_product_id_fk": {
+					"name": "commercial_document_line_product_id_product_id_fk",
+					"tableFrom": "commercial_document_line",
+					"tableTo": "product",
+					"columnsFrom": ["product_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				},
+				"commercial_document_line_uom_code_uom_code_fk": {
+					"name": "commercial_document_line_uom_code_uom_code_fk",
+					"tableFrom": "commercial_document_line",
+					"tableTo": "uom",
+					"columnsFrom": ["uom_code"],
+					"columnsTo": ["code"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.commercial_document": {
+			"name": "commercial_document",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"organization_id": {
+					"name": "organization_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"document_type": {
+					"name": "document_type",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"document_number": {
+					"name": "document_number",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"series": {
+					"name": "series",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'001'"
+				},
+				"authorization_number": {
+					"name": "authorization_number",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"electronic_status": {
+					"name": "electronic_status",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'not_applicable'"
+				},
+				"authorization_date": {
+					"name": "authorization_date",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"issue_date": {
+					"name": "issue_date",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"due_date": {
+					"name": "due_date",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"customer_id": {
+					"name": "customer_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"supplier_id": {
+					"name": "supplier_id",
+					"type": "uuid",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"reference_document_id": {
+					"name": "reference_document_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"reference_document_number": {
+					"name": "reference_document_number",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"reason_code": {
+					"name": "reason_code",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"reason_description": {
+					"name": "reason_description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"subtotal": {
+					"name": "subtotal",
+					"type": "numeric(18, 2)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"discount_total": {
+					"name": "discount_total",
+					"type": "numeric(18, 2)",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'0'"
+				},
+				"tax_total": {
+					"name": "tax_total",
+					"type": "numeric(18, 2)",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'0'"
+				},
+				"total": {
+					"name": "total",
+					"type": "numeric(18, 2)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"tax_breakdown": {
+					"name": "tax_breakdown",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'[]'::jsonb"
+				},
+				"discount_breakdown": {
+					"name": "discount_breakdown",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'[]'::jsonb"
+				},
+				"currency": {
+					"name": "currency",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'USD'"
+				},
+				"status": {
+					"name": "status",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'draft'"
+				},
+				"transport_info": {
+					"name": "transport_info",
+					"type": "jsonb",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "'{}'::jsonb"
+				},
+				"xml_content": {
+					"name": "xml_content",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"pdf_url": {
+					"name": "pdf_url",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"reference_number": {
+					"name": "reference_number",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"order_id": {
+					"name": "order_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"notes": {
+					"name": "notes",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"terms": {
+					"name": "terms",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {
+				"commercial_document_organization_id_document_type_index": {
+					"name": "commercial_document_organization_id_document_type_index",
+					"columns": [
+						{
+							"expression": "organization_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						},
+						{
+							"expression": "document_type",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"commercial_document_customer_id_index": {
+					"name": "commercial_document_customer_id_index",
+					"columns": [
+						{
+							"expression": "customer_id",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"commercial_document_issue_date_index": {
+					"name": "commercial_document_issue_date_index",
+					"columns": [
+						{
+							"expression": "issue_date",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"commercial_document_status_index": {
+					"name": "commercial_document_status_index",
+					"columns": [
+						{
+							"expression": "status",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				}
+			},
+			"foreignKeys": {
+				"commercial_document_customer_id_customer_id_fk": {
+					"name": "commercial_document_customer_id_customer_id_fk",
+					"tableFrom": "commercial_document",
+					"tableTo": "customer",
+					"columnsFrom": ["customer_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				},
+				"commercial_document_supplier_id_supplier_id_fk": {
+					"name": "commercial_document_supplier_id_supplier_id_fk",
+					"tableFrom": "commercial_document",
+					"tableTo": "supplier",
+					"columnsFrom": ["supplier_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"commercial_document_organization_id_document_type_document_number_unique": {
+					"name": "commercial_document_organization_id_document_type_document_number_unique",
+					"nullsNotDistinct": false,
+					"columns": ["organization_id", "document_type", "document_number"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		},
+		"public.document_sequence": {
+			"name": "document_sequence",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "gen_random_uuid()"
+				},
+				"organization_id": {
+					"name": "organization_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"document_type": {
+					"name": "document_type",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"series": {
+					"name": "series",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'001'"
+				},
+				"year": {
+					"name": "year",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"last_number": {
+					"name": "last_number",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"default": 0
+				},
+				"authorization_number": {
+					"name": "authorization_number",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"authorization_start_date": {
+					"name": "authorization_start_date",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"authorization_end_date": {
+					"name": "authorization_end_date",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"is_active": {
+					"name": "is_active",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"default": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"document_sequence_organization_id_document_type_series_year_unique": {
+					"name": "document_sequence_organization_id_document_type_series_year_unique",
+					"nullsNotDistinct": false,
+					"columns": ["organization_id", "document_type", "series", "year"]
+				}
+			},
 			"policies": {},
 			"checkConstraints": {},
 			"isRLSEnabled": false

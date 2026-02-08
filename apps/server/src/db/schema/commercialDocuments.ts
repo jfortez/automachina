@@ -8,6 +8,7 @@ import {
 	pgTable,
 	text,
 	unique,
+	uuid,
 } from "drizzle-orm/pg-core";
 import * as z from "zod";
 import { customers } from "./customer";
@@ -15,10 +16,6 @@ import { product } from "./products";
 import { suppliers } from "./suppliers";
 import { uom } from "./uom";
 import { timestamps, uuidPk } from "./utils";
-
-// ============================================================================
-// ENUMS REUTILIZABLES
-// ============================================================================
 
 export const COMMERCIAL_DOCUMENT_TYPES = [
 	"invoice",
@@ -54,10 +51,6 @@ export const REASON_CODES = [
 	"promotional",
 	"other",
 ] as const;
-
-// ============================================================================
-// ZOD SCHEMAS PARA JSONB
-// ============================================================================
 
 export const commercialDocumentsTransportInfoSchema = z.object({
 	transportMode: z.enum(["vehicle", "plane", "ship", "train"]),
@@ -98,10 +91,6 @@ export type CommercialDocumentsDiscountBreakdown = z.infer<
 	typeof commercialDocumentsDiscountBreakdownSchema
 >;
 
-// ============================================================================
-// TABLA PRINCIPAL
-// ============================================================================
-
 export const commercialDocuments = pgTable(
 	"commercial_document",
 	{
@@ -123,8 +112,8 @@ export const commercialDocuments = pgTable(
 		issueDate: text("issue_date").notNull(),
 		dueDate: text("due_date"),
 
-		customerId: text("customer_id").references(() => customers.id),
-		supplierId: text("supplier_id").references(() => suppliers.id),
+		customerId: uuid("customer_id").references(() => customers.id),
+		supplierId: uuid("supplier_id").references(() => suppliers.id),
 
 		referenceDocumentId: text("reference_document_id"),
 		referenceDocumentNumber: text("reference_document_number"),
@@ -177,19 +166,15 @@ export const commercialDocuments = pgTable(
 	],
 );
 
-// ============================================================================
-// LÍNEAS DE DOCUMENTO
-// ============================================================================
-
 export const commercialDocumentLines = pgTable(
 	"commercial_document_line",
 	{
 		id: uuidPk("id"),
-		documentId: text("document_id")
+		documentId: uuid("document_id")
 			.references(() => commercialDocuments.id, { onDelete: "cascade" })
 			.notNull(),
 
-		productId: text("product_id").references(() => product.id),
+		productId: uuid("product_id").references(() => product.id),
 		description: text("description").notNull(),
 
 		quantity: numeric("quantity", { precision: 28, scale: 9 }).notNull(),
@@ -219,10 +204,6 @@ export const commercialDocumentLines = pgTable(
 	(t) => [index().on(t.documentId)],
 );
 
-// ============================================================================
-// SECUENCIAS DE NUMERACIÓN
-// ============================================================================
-
 export const documentSequences = pgTable(
 	"document_sequence",
 	{
@@ -247,10 +228,6 @@ export const documentSequences = pgTable(
 	},
 	(t) => [unique().on(t.organizationId, t.documentType, t.series, t.year)],
 );
-
-// ============================================================================
-// RELACIONES
-// ============================================================================
 
 export const commercialDocumentsRelations = relations(
 	commercialDocuments,

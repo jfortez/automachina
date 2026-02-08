@@ -1,4 +1,5 @@
 import { PgBoss, type Job as PgBossJob, type Queue } from "pg-boss";
+import { credentials } from "@/lib/db";
 import { env } from "@/lib/env";
 import { jobLogger } from "./logger";
 
@@ -32,11 +33,7 @@ export class JobQueue {
 			this.logger.info("Initializing job queue...");
 
 			this.boss = new PgBoss({
-				host: env.DATABASE_HOST,
-				port: env.DATABASE_PORT,
-				user: env.DATABASE_USER,
-				password: env.DATABASE_PASSWORD,
-				database: env.DATABASE_NAME,
+				...credentials,
 				schema: "pgboss",
 			});
 
