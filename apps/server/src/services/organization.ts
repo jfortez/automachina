@@ -70,10 +70,24 @@ const createOrganization = async (data: CreateOrgInput, user: User) => {
 				keepCurrentActiveOrganization: false,
 			},
 		});
+		const orgId = newOrg!.id;
+
+		if (data.settings) {
+			db.insert(organizationSettings)
+				.values({
+					organizationId: orgId,
+					...data.settings,
+					defaultTaxPercent: data.settings.defaultTaxPercent.toString(),
+					maxDiscountPercent: data.settings.maxDiscountPercent.toString(),
+					orderApprovalThreshold:
+						data.settings.orderApprovalThreshold?.toString(),
+					maxCashDiscrepancy: data.settings.maxCashDiscrepancy.toString(),
+				})
+				.then();
+		}
 
 		await createBucket(`org-${newOrg?.slug}`);
 		//TODO: make this to hook
-		const orgId = newOrg!.id;
 
 		const [warehouse] = await db
 			.insert(warehouses)
@@ -107,12 +121,6 @@ const createOrganization = async (data: CreateOrgInput, user: User) => {
 			code: "general",
 			name: "General",
 			description: "Default general category",
-		});
-
-		// Create default organization settings
-		await db.insert(organizationSettings).values({
-			organizationId: orgId,
-			// All other fields use schema defaults
 		});
 
 		return newOrg!;

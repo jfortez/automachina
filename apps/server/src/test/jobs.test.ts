@@ -7,7 +7,7 @@ import { inventoryReservations } from "@/db/schema/orders";
 import { initializeJobs, jobQueue, shutdownJobs } from "@/jobs";
 import { expireReservationsHandler } from "@/jobs/handlers/inventory/expireReservations";
 import type { AppRouter } from "@/routers";
-import { globals } from "./globals";
+import { globals } from "./_globals";
 import { setupTestContext } from "./util";
 
 describe("Testing Job Queue System", () => {

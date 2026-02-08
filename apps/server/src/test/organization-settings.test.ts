@@ -1,4 +1,5 @@
 import type { inferProcedureInput } from "@trpc/server";
+import { nanoid } from "nanoid";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { AppRouter } from "@/routers";
 import { setupTestContext } from "./util";
@@ -6,13 +7,13 @@ import { setupTestContext } from "./util";
 describe("Organization Settings Management", () => {
 	let ctx: Awaited<ReturnType<typeof setupTestContext>>;
 	let myOrg: Awaited<ReturnType<typeof ctx.caller.organization.create>>;
+
 	beforeAll(async () => {
 		ctx = await setupTestContext();
 
 		myOrg = await ctx.caller.organization.create({
 			name: "Test Organization",
-
-			code: `test-org-${Date.now()}`,
+			code: String(`test-org-${nanoid(5)}-${Date.now()}`).toLowerCase(),
 		});
 	});
 

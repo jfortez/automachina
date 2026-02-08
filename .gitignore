@@ -16,3 +16,8 @@ GEMINI.md.bak
 # END Ruler Generated Files
 .clinerules.worktrees/
 docs/plans
+apps/**/*/test/_globals.ts
+**/*/node_modules
+**/*/dist
+**/*/build
+**/*/out

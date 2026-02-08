@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 const envVariables = z.object({
-	DATABASE_URL: z.url(),
+	// DATABASE_URL: z.url(),
+	DATABASE_HOST: z.string().default("localhost"),
+	DATABASE_PORT: z.coerce.number().default(5432),
+	DATABASE_USER: z.string(),
+	DATABASE_PASSWORD: z.string(),
+	DATABASE_NAME: z.string(),
 	CORS_ORIGIN: z.url().default("http://localhost:3001"),
 	BETTER_AUTH_SECRET: z.string().min(32).max(64),
 	BETTER_AUTH_URL: z.url().default("http://localhost:3000"),

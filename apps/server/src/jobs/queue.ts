@@ -32,7 +32,11 @@ export class JobQueue {
 			this.logger.info("Initializing job queue...");
 
 			this.boss = new PgBoss({
-				connectionString: env.DATABASE_URL,
+				host: env.DATABASE_HOST,
+				port: env.DATABASE_PORT,
+				user: env.DATABASE_USER,
+				password: env.DATABASE_PASSWORD,
+				database: env.DATABASE_NAME,
 				schema: "pgboss",
 			});
 
@@ -139,7 +143,10 @@ export class JobQueue {
 		this.logger.info({ name, cron }, "Job scheduled with cron");
 	}
 
-	async createQueue(name: string, options?: Omit<Queue, 'name'>): Promise<void> {
+	async createQueue(
+		name: string,
+		options?: Omit<Queue, "name">,
+	): Promise<void> {
 		if (!this.boss || !this.isStarted) {
 			this.logger.debug(
 				{ name },

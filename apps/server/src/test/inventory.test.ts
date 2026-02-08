@@ -4,7 +4,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { initializeJobs, shutdownJobs } from "@/jobs";
 import { expireReservationsHandler } from "@/jobs/handlers/inventory/expireReservations";
 import type { AppRouter } from "@/routers";
-import { globals } from "./globals";
+import { globals } from "./_globals";
 import { formatNumeric, setupTestContext } from "./util";
 
 describe("Testing Handling Units", () => {

@@ -11,19 +11,9 @@ import {
 	TAX_REGIONS,
 } from "@/db/schema/organization";
 
-export const createOrg = z.object({
-	code: z.string().min(2).max(100),
-	name: z.string().min(2).max(100),
-	description: z.string().max(500).optional(),
-});
-
 export const addOrgMember = z.object({
 	organizationId: z.uuid(),
 	members: z.array(z.uuid()),
-});
-
-export const updateOrg = createOrg.omit({ code: true }).extend({
-	id: z.uuid(),
 });
 
 export const createOrganizationSettings = z.object({
@@ -60,25 +50,38 @@ export const createOrganizationSettings = z.object({
 	branchAddress: organizationAddressSchema.optional(),
 
 	// Branding
-	logoUrl: z.string().url().optional(),
-	faviconUrl: z.string().url().optional(),
+	logoUrl: z.url().optional(),
+	faviconUrl: z.url().optional(),
 	siteTitle: z.string().optional(),
 	siteSubtitle: z.string().optional(),
 
 	// Contact
-	website: z.string().url().optional(),
-	contactEmail: z.string().email().optional(),
+	website: z.url().optional(),
+	contactEmail: z.email().optional(),
 });
 
-export const updateOrganizationSettings = createOrganizationSettings.partial().extend({
-	id: z.string(),
+export const createOrg = z.object({
+	code: z.string().min(2).max(100),
+	name: z.string().min(2).max(100),
+	description: z.string().max(500).optional(),
+	settings: createOrganizationSettings
+		.omit({ organizationId: true })
+		.optional(),
 });
+
+export const updateOrg = createOrg.omit({ code: true }).extend({
+	id: z.uuid(),
+});
+
+export const updateOrganizationSettings = createOrganizationSettings
+	.partial()
+	.extend({
+		id: z.string(),
+	});
 
 export const getOrganizationSettings = z.object({
 	organizationId: z.string(),
 });
-
-
 
 export type AddOrgMemberInput = z.infer<typeof addOrgMember>;
 export type CreateOrgInput = z.infer<typeof createOrg>;

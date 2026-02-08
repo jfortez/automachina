@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { drizzle } from "drizzle-orm/node-postgres";
+
 import ora from "ora";
 import { v4 as uuid } from "uuid";
+import { db } from "@/db";
 import { auth } from "@/lib/auth";
-import { env } from "@/lib/env";
 import * as productSchema from "../schema/products";
 import * as uomSchema from "../schema/uom";
 import * as warehouseSchema from "../schema/warehouse";
@@ -12,7 +12,7 @@ import { DEFAULT_USERS, UOM_CONVERSIONS, UOM_ITEMS } from "./data";
 
 async function main() {
 	const UNIQUE_ID = uuid();
-	const db = drizzle(env.DATABASE_URL);
+
 	const spinner = ora("Starting Seeding").start();
 
 	let hasError = false;
@@ -121,7 +121,7 @@ async function main() {
 		};
 
 		fs.writeFileSync(
-			path.join(__dirname, "..", "..", "test", "globals.ts"),
+			path.join(__dirname, "..", "..", "test", "_globals.ts"),
 			`export const globals = ${JSON.stringify(globals, null, 2)};`,
 		);
 	} catch (error) {

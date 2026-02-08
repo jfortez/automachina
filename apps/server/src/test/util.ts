@@ -3,7 +3,7 @@ import { DEFAULT_USERS } from "@/db/seed/data";
 import { auth } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import { createCaller } from "@/routers";
-import { globals } from "./globals";
+import { globals } from "./_globals";
 
 export interface TestContext {
 	caller: ReturnType<typeof createCaller>;

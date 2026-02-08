@@ -49,14 +49,15 @@ export const Route = createFileRoute("/_auth/inventory/")({
 
 function InventoryPage() {
 	const { data: activeOrg } = useActiveOrganization();
+
+	const currentOrgId = activeOrg?.id || "";
 	const client = useQueryClient();
 	const { data: products, isLoading } = useQuery(
-		trpc.product.getByOrg.queryOptions(activeOrg?.id ?? "", {
-			enabled: !!activeOrg?.id,
+		trpc.product.getByOrg.queryOptions(undefined, {
+			enabled: !!currentOrgId,
 		}),
 	);
 
-	// State for dialogs
 	const [selectedProduct, setSelectedProduct] = useState<any>(null);
 	const [actionType, setActionType] = useState<
 		"receive" | "sell" | "adjust" | null
@@ -81,7 +82,7 @@ function InventoryPage() {
 							<TableHead>Name</TableHead>
 							<TableHead>Category</TableHead>
 							<TableHead>Base UOM</TableHead>
-							<TableHead className="w-[100px]">Actions</TableHead>
+							<TableHead className="w-25">Actions</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -168,11 +169,10 @@ function InventoryPage() {
 					{selectedProduct && actionType === "receive" && (
 						<ReceiveForm
 							product={selectedProduct}
-							orgId={activeOrg?.id!}
 							onSuccess={() => {
 								closeDialog();
 								client.invalidateQueries({
-									queryKey: trpc.product.getByOrg.queryKey(activeOrg?.id),
+									queryKey: trpc.product.getByOrg.queryKey(),
 								});
 							}}
 						/>
@@ -180,7 +180,6 @@ function InventoryPage() {
 					{selectedProduct && actionType === "sell" && (
 						<SellForm
 							product={selectedProduct}
-							orgId={activeOrg?.id!}
 							onSuccess={() => {
 								closeDialog();
 							}}
@@ -189,7 +188,6 @@ function InventoryPage() {
 					{selectedProduct && actionType === "adjust" && (
 						<AdjustForm
 							product={selectedProduct}
-							orgId={activeOrg?.id!}
 							onSuccess={() => {
 								closeDialog();
 							}}
@@ -203,11 +201,9 @@ function InventoryPage() {
 
 function ReceiveForm({
 	product,
-	orgId,
 	onSuccess,
 }: {
 	product: any;
-	orgId: string;
 	onSuccess: () => void;
 }) {
 	const mutation = useMutation(
@@ -228,7 +224,6 @@ function ReceiveForm({
 		},
 		onSubmit: async ({ value }) => {
 			await mutation.mutateAsync({
-				organizationId: orgId,
 				productId: product.id,
 				qty: Number(value.qty),
 				cost: Number(value.cost),
@@ -281,11 +276,9 @@ function ReceiveForm({
 
 function SellForm({
 	product,
-	orgId,
 	onSuccess,
 }: {
 	product: any;
-	orgId: string;
 	onSuccess: () => void;
 }) {
 	const mutation = useMutation(
@@ -305,7 +298,6 @@ function SellForm({
 		},
 		onSubmit: async ({ value }) => {
 			await mutation.mutateAsync({
-				organizationId: orgId,
 				productId: product.id,
 				lines: [{ qty: Number(value.qty), uomCode: value.uomCode }],
 			});
@@ -344,11 +336,9 @@ function SellForm({
 
 function AdjustForm({
 	product,
-	orgId,
 	onSuccess,
 }: {
 	product: any;
-	orgId: string;
 	onSuccess: () => void;
 }) {
 	const mutation = useMutation(
@@ -370,7 +360,6 @@ function AdjustForm({
 		},
 		onSubmit: async ({ value }) => {
 			await mutation.mutateAsync({
-				organizationId: orgId,
 				productId: product.id,
 				warehouseId: "default", // Assuming default warehouse for now
 				qty: Number(value.qty),
